@@ -179,16 +179,17 @@ Damit niemand durch Dauer-Überfälle aus dem Spiel gedrängt wird, solange er n
 
 | Regel | Wie |
 |---|---|
-| **Schutzzeit** | Nach jedem gewonnenen oder unentschiedenen Raubzug ist das Opfer vor **allen** Raubzügen geschützt: `max(1 h, S₂₄ · T_max) / Tempo`. S₂₄ = Schaden der letzten 24 h als Anteil am Vermögen (Vorräte + Einheiten + Anlagen aller Bereiche, Grundwerte wie beim Händler), mehrere Überfälle kombiniert: 1 − (1 − S₁)(1 − S₂)…; T_max = 12 h · (1 + (1 − min(1, r))), r = Punkte Opfer / Punkte Angreifer (12 bis 24 h). Eine Schutzzeit wird nie verkürzt; anrollende Züge kehren bei Ankunft um. Abgewehrte Angriffe lösen keine aus. |
-| **Gegenschlag** | Greift ein Geschützter selbst an, darf genau dieses Ziel ihn trotz Schutz angreifen. |
+| **Persönliche Sperre** | Nach einem gewonnenen oder unentschiedenen Raubzug ist **nur dieser Angreifer** für das Opfer gesperrt: `max(1 h, S · T_max) / Tempo`. S = Schaden dieses Angriffs als Anteil am Vermögen (Vorräte + Einheiten + Anlagen aller Bereiche, Grundwerte wie beim Händler); T_max = 12 h · (1 + (1 − min(1, r))), r = Punkte Opfer / Punkte Angreifer (12 bis 24 h). Andere Spieler werden nicht ausgesperrt; anrollende Züge des Gesperrten kehren um; abgewehrte Angriffe lösen keine Sperre aus. |
+| **Verlustdeckel** | Ein Angriff darf samt Kampfverlusten höchstens **25 %** des Vermögens kosten, alle Angriffe im Fenster von 24 h ÷ Tempo zusammen höchstens **50 %** (kombiniert 1 − (1 − S₁)(1 − S₂)…). Die Beute wird entsprechend gekürzt; gefallene Einheiten bleiben verloren. Bleiben weniger als 5 % Spielraum, ist das Opfer für **alle** geschützt, bis alte Verluste aus dem Fenster fallen. |
+| **Rückschlag** | Wer jemanden angreift, darf von diesem Ziel einmal zurückbekommen (24 h ÷ Tempo lang), auch trotz Sperre oder Tagesgrenze; die 25 %-Grenze gilt weiter. |
 | **Stärkeverhältnis** | Unter 20 % der Punkte des Angreifers kein Raubzug, 20–50 % anteilig weniger Beute – außer der Schwächere hat in den letzten 72 h zuerst angegriffen. |
 | **Tresor** | 10 % der Lagergrenze je Rohstoff sind nie erbeutbar, +5 % je Stufe der neuen Forschung **Sicherheitstechnik** (höchstens 50 %); bei Euro 6 h Produktion (+50 % je Stufe). |
 | **Wiederaufbauhilfe** | Wer einen Raubzug verliert, produziert 12 h ÷ Tempo lang 25 % mehr (alle Bereiche). |
 | **Spionage-Abwehr** | E-Bike-Kurier kostet 400 Holz, 800 Baustoffe, 100 Euro; jede Erkundung eines Spielers zusätzlich 100 Euro + 50 je Stufe Informationsnetz. Neue Forschung **Abschirmung**. Angriffswert A = Informationsnetz + log₂(Kuriere), Abwehrwert D = Abschirmung + 0,05 · Wachtürme + 0,01 · Sicherheitskräfte. Jeder Kurier wird mit 10 % + 15 % · (D − A) abgefangen (5–90 %). Bericht je Vorsprung A − D ± 0,5: unter 0 keine Vorräte, dann Spannen ± 40 / 20 / 10 / 5 %, ab 1 Einheiten ungefähr, ab 2 genau und Gebäude, ab 3 Forschung, Schutzzeit, ob der Bunker belegt ist. Bunker-Inhalt und Tresor nie genau. Erkundungssperre je Ziel-Spieler 6 h ÷ Tempo (abgefangen: 12 h), nur eine Erkundung je Ziel gleichzeitig. Der Erkundete erfährt den Namen, wenn Kuriere abgefangen wurden oder seine Abschirmung ≥ 1 und ≥ dem Informationsnetz des Spähers ist. |
 
-Anzeigen: eigene Schutzzeit und Wiederaufbauhilfe oben im Kopf; „🛡 bis …“ und Erkundungssperre in der Zielauswahl unter Züge
-und auf der Karte; Kampfbericht mit Schaden, Schutzzeit, Tresor und Beutefaktor; Kasten „Faire Regeln“ unter Züge;
-Planungshilfe und KI-Berater kennen die Regeln. Neue Tabellen: `angriffe_log`, `angriffsschutz`, `spionage_log`, Spalte `spieler.wiederaufbau_bis_ts`.
+Anzeigen: eigene Verluste, Tagesgrenze und Wiederaufbauhilfe oben im Kopf; „🛡 für dich gesperrt bis …“, Spielraum und Erkundungssperre
+in der Zielauswahl unter Züge und auf der Karte; Kampfbericht mit Schaden, Sperre, Spielraum, Tresor und Beutefaktor; Kasten „Faire Regeln“ unter Züge;
+Planungshilfe und KI-Berater kennen die Regeln. Neue Tabellen: `angriffe_log`, `angriffssperre`, `spionage_log`, Spalte `spieler.wiederaufbau_bis_ts`.
 
 Hinweis: Weil der Kurier teurer ist, steigen die Punkte für bereits vorhandene Kuriere etwas (Einheiten zählen mit ihren aktuellen Baukosten).
 Die Kosten der Forschung Informationsnetz sind bewusst **nicht** erhöht worden, damit sich die Punkte für bereits erforschte Stufen nicht

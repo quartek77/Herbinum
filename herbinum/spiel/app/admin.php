@@ -240,7 +240,7 @@ function spieler_loeschen(int $adminId, int $sid, string $bestaetigung): ?string
         foreach (['DELETE FROM angriffe_log WHERE angreifer_id = ? OR verteidiger_id = ?', 'DELETE FROM spionage_log WHERE spaeher_id = ? OR ziel_id = ?'] as $sql) {
             $db->prepare($sql)->execute([$sid, $sid]);
         }
-        $db->prepare('DELETE FROM angriffsschutz WHERE verteidiger_id = ?')->execute([$sid]);
+        $db->prepare('DELETE FROM angriffssperre WHERE verteidiger_id = ? OR angreifer_id = ?')->execute([$sid, $sid]);
         $db->prepare('DELETE FROM spieler WHERE id = ?')->execute([$sid]);
         return null;
     });

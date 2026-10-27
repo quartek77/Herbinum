@@ -134,11 +134,13 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
 </div>
 
 <?php
-$meinSchutz = angriffsschutz_bis(db(), (int)$spieler['id']);
+$meinSchutz = vollschutz_bis(db(), (int)$spieler['id']);
+$meinVerlust = verlust_stand(db(), (int)$spieler['id'], time())['verlust'];
 $meinWiederaufbau = wiederaufbau_bis((int)$spieler['id']);
-if ($meinSchutz || $meinWiederaufbau > time()): ?>
+if ($meinSchutz || $meinVerlust > 0.005 || $meinWiederaufbau > time()): ?>
   <div class="schutz-band" role="status"><span aria-hidden="true">🛡</span>
-    <span><?= $meinSchutz ? '<b>Schutzzeit</b> bis ' . date('d.m. H:i', $meinSchutz) . ' Uhr – niemand kann dich überfallen. Greifst du selbst jemanden an, darf dieser zurückschlagen.' : '' ?>
+    <span><?= $meinSchutz ? '<b>Tagesgrenze erreicht:</b> Bis ' . date('d.m. H:i', $meinSchutz) . ' Uhr kann dich niemand überfallen. Greifst du selbst jemanden an, darf dieser einmal zurückschlagen.'
+          : ($meinVerlust > 0.005 ? '<b>Verluste:</b> ' . round($meinVerlust * 100) . ' % deines Vermögens in den letzten ' . round(SCHUTZ_FENSTER_H / tempo()) . ' h – ab ' . round(VERLUST_MAX_TAG * 100) . ' % bist du für alle geschützt.' : '') ?>
       <?= $meinWiederaufbau > time() ? ' <b>Wiederaufbauhilfe:</b> +' . round(WIEDERAUFBAU_BONUS * 100) . ' % Produktion bis ' . date('H:i', $meinWiederaufbau) . ' Uhr.' : '' ?></span></div>
 <?php endif ?>
 <?php foreach ($wetterJetzt as ['e' => $e, 's' => $s]):

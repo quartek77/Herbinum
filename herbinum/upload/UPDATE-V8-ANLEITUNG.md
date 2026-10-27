@@ -4,8 +4,11 @@ Dieses Paket enthält **Version 7 und Version 8 zusammen**. Läuft auf dem Serve
 Version 7 muss nicht vorher eingespielt werden.
 
 **Neu in Version 8:**
-- **Schutzzeit nach Überfällen:** Wer überfallen wurde, ist danach eine Zeit lang vor *allen* Raubzügen geschützt –
-  je größer der Schaden und je schwächer das Opfer, desto länger (bei Spieltempo 2: höchstens 12 Stunden).
+- **Sperre nach Überfällen:** Wer jemanden überfallen hat, kann ihn eine Zeit lang nicht wieder angreifen – je größer der Schaden
+  und je schwächer das Opfer, desto länger (bei Spieltempo 2: höchstens 12 Stunden). Andere Spieler sperrt das nicht aus.
+- **Verlustgrenze:** Ein Angriff kostet samt Kampfverlusten höchstens 25 % des Vermögens, alle Angriffe zusammen höchstens 50 %
+  in 24 Stunden (bei Tempo 2: 12 Stunden). Ist die Grenze erreicht, ist das Opfer für alle geschützt.
+- **Rückschlag:** Wer angreift, darf vom Ziel einmal zurückbekommen.
 - **Tresor:** 10 % des Lagers sind nie erbeutbar, mit der neuen Forschung **Sicherheitstechnik** bis 50 %.
 - **Stärkeverhältnis:** Keine Raubzüge gegen Spieler unter 20 % der eigenen Punkte, bis 50 % weniger Beute.
 - **Wiederaufbauhilfe:** Nach einem verlorenen Raubzug 25 % mehr Produktion für einige Stunden.
@@ -14,7 +17,7 @@ Version 7 muss nicht vorher eingespielt werden.
 
 Dazu alles aus Version 7: „Was brauche ich?“, KI-Berater, KI-Einstellungen, Online-Lampe, Wappen-Vorschau, moderne Begriffe.
 
-**Spielstände bleiben erhalten.** Neu sind nur Tabellen (`angriffe_log`, `angriffsschutz`, `spionage_log`, aus Version 7 `ki_chat`, `ki_log`)
+**Spielstände bleiben erhalten.** Neu sind nur Tabellen (`angriffe_log`, `angriffssperre`, `spionage_log`, aus Version 7 `ki_chat`, `ki_log`)
 und eine Spalte. Getestet: Ein Spielstand der Version 7 war nach dem Update Feld für Feld identisch; die Wege 6 → 8 und 5 → 8 ebenfalls.
 
 ## 1. Sicherung
@@ -57,7 +60,7 @@ Steht dort „auf dem neuesten Stand (Version 5)“, liegen die neuen Dateien no
 
 ## 5. Kurz prüfen
 
-- [ ] **Züge:** rechts der Kasten **„Faire Regeln“**; in der Zielauswahl steht bei geschützten Spielern „🛡 bis …“.
+- [ ] **Züge:** rechts der Kasten **„Faire Regeln“**; in der Zielauswahl stehen „🛡 für dich gesperrt bis …“ oder der Spielraum.
 - [ ] **Forschung:** neu sind **Sicherheitstechnik** und **Abschirmung**.
 - [ ] **Fuhrpark:** Der E-Bike-Kurier kostet jetzt 400 Holz, 800 Baustoffe, 100 Euro.
 - [ ] Alte Gestaltung? Einmal **Strg + F5**.
@@ -66,8 +69,8 @@ Steht dort „auf dem neuesten Stand (Version 5)“, liegen die neuen Dateien no
 
 Vorschlag für ein Rundschreiben:
 
-> **Update: Mehr Fairness in Herbinum.** Wer überfallen wurde, ist jetzt eine Weile vor weiteren Raubzügen geschützt –
-> je größer der Schaden, desto länger. Ein Teil eures Lagers liegt immer sicher im Tresor (ausbaubar mit Sicherheitstechnik).
+> **Update: Mehr Fairness in Herbinum.** Wer jemanden überfallen hat, kann ihn eine Weile nicht wieder angreifen – je größer der Schaden,
+> desto länger. Niemand verliert durch einen Angriff mehr als 25 % und an einem Tag mehr als 50 % seines Vermögens – danach ist er geschützt. Ein Teil eures Lagers liegt immer sicher im Tresor (ausbaubar mit Sicherheitstechnik).
 > Gegen deutlich Schwächere gibt es weniger oder keine Beute, und wer verliert, produziert eine Zeit lang schneller.
 > Spionieren ist teurer und liefert nur noch Schätzungen; mit Abschirmung fangt ihr fremde Kuriere ab und erfahrt, wer euch ausspäht.
 > Die Regeln stehen unter **Züge → Faire Regeln**.
@@ -76,8 +79,8 @@ Vorschlag für ein Rundschreiben:
 
 ## Werte nachjustieren
 
-Alle Zahlen stehen in `app/rules.php` im Abschnitt **„Fairness“** (z. B. `SCHUTZ_T_BASIS_H = 12.0` für die Schutzzeit,
-`TRESOR_BASIS = 0.10` für den Grundschutz). Datei ändern, nach `/herbinum.event-dv.de/app/` hochladen – fertig, ohne `install.php`.
+Alle Zahlen stehen in `app/rules.php` im Abschnitt **„Fairness“** (z. B. `SCHUTZ_T_BASIS_H = 12.0` für die Sperre,
+`VERLUST_MAX_ANGRIFF = 0.25` und `VERLUST_MAX_TAG = 0.50` für die Verlustgrenzen, `TRESOR_BASIS = 0.10` für den Grundschutz). Datei ändern, nach `/herbinum.event-dv.de/app/` hochladen – fertig, ohne `install.php`.
 
 ## Notfall: zurück
 

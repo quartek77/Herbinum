@@ -406,7 +406,11 @@ const EREIGNISSE = [
 const SCHUTZ_T_BASIS_H = 12.0;         // Schutzzeit bei gleich starken Gegnern und 100 % Schaden
 const SCHUTZ_K_SCHWAECHE = 1.0;        // Aufschlag für deutlich Schwächere: bis zu (1 + K)-fache Zeit
 const SCHUTZ_T_MIN_H = 1.0;            // auch ein kleiner Erfolg verschafft mindestens diese Pause
-const SCHUTZ_FENSTER_S = 86400;        // Schäden der letzten 24 h zählen zusammen
+const SCHUTZ_FENSTER_H = 24.0;         // Verluste der letzten 24 h (÷ Tempo) zählen zusammen
+const VERLUST_MAX_TAG = 0.50;          // höchstens 50 % des Vermögens in diesem Fenster – alle Angreifer zusammen
+const VERLUST_MAX_ANGRIFF = 0.25;      // höchstens 25 % durch einen einzelnen Angriff
+const VOLLSCHUTZ_REST = 0.05;          // bleiben weniger als 5 % Spielraum, ist das Opfer für alle geschützt
+const RUECKSCHLAG_H = 24.0;            // wer selbst angreift, darf vom Ziel so lange (÷ Tempo) einmal zurückbekommen
 const STAERKE_SPERRE = 0.2;            // unter 20 % der Punkte des Angreifers ist kein Raubzug möglich …
 const STAERKE_VOLL = 0.5;              // … ab 50 % gibt es volle Beute, dazwischen anteilig
 const GEGENANGRIFF_S = 72 * 3600;      // wer zuerst angegriffen hat, darf vom Opfer ohne Stärke-Grenze zurückbekommen
@@ -420,13 +424,18 @@ const SPIONAGE_SPERRE_ABGEFANGEN = 2.0; // nach einer abgefangenen Erkundung dop
 const SPIONAGE_EINSATZ_EURO = 100;     // Einsatzkosten je Erkundung eines Spielers …
 const SPIONAGE_EINSATZ_JE_STUFE = 50;  // … plus je Stufe Informationsnetz
 
-/** Längste Schutzzeit in Stunden aus dem Punkteverhältnis r = Verteidiger / Angreifer. */
+function schutz_fenster_s(float $tempo): int
+{
+    return (int)round(SCHUTZ_FENSTER_H * 3600 / $tempo);
+}
+
+/** Längste persönliche Sperre in Stunden aus dem Punkteverhältnis r = Verteidiger / Angreifer. */
 function schutz_t_max(float $r): float
 {
     return SCHUTZ_T_BASIS_H * (1 + SCHUTZ_K_SCHWAECHE * (1 - min(1.0, max(0.0, $r))));
 }
 
-/** Schutzzeit in Sekunden für den Schadensanteil der letzten 24 h (0–1). */
+/** Persönliche Sperre in Sekunden für den Schadensanteil eines Angriffs (0–1). */
 function schutzzeit_s(float $schaden24, float $r, float $tempo): int
 {
     return (int)round(max(SCHUTZ_T_MIN_H, max(0.0, min(1.0, $schaden24)) * schutz_t_max($r)) * 3600 / $tempo);

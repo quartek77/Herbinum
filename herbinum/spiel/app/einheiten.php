@@ -201,7 +201,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
         }
         foreach ($einheiten as $typ => $n) {
             if (($z['einheiten'][$typ] ?? 0) < $n) {
-                return 'Hier stehen nicht genug ' . EINHEITEN[$typ]['name'] . ' bereit.';
+                return 'Hier stehen nicht genug Einheiten vom Typ „' . EINHEITEN[$typ]['name'] . '“ bereit.';
             }
         }
         $zielBesitzer = $ziel['besitzer_id'] === null ? null : (int)$ziel['besitzer_id'];
@@ -298,7 +298,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
            ->execute([$sid, $startId, $zielId, $auftrag, $jetzt, $jetzt + $dauer, $jetzt + 2 * $dauer, json_encode($einheiten),
                       $ladung['holz'], $ladung['ziegel'], $ladung['korn'], $ladung['taler']]);
         if ($auftrag === 'angriff') {
-            gegenschlag_freigeben($db, $sid, $zielBesitzer);     // wer aus dem Schutz heraus angreift, darf von diesem Ziel zurückbekommen
+            gegenschlag_freigeben($db, $sid, $zielBesitzer);     // wer angreift, darf vom Ziel einmal zurückbekommen
         }
         return null;
     });
@@ -561,7 +561,8 @@ function erkundungsbericht(PDO $db, array $zug, array $ziel, ?float $vorsprung =
     if ($vorsprung >= 3) {
         $r['forschung'] = $fremdeFo;
         $r['bunker_belegt'] = bunker_belegt($ziel['bunker']) > 0;
-        $r['schutz_bis'] = angriffsschutz_bis($db, (int)$b['besitzer_id']);
+        $r['vollschutz_bis'] = vollschutz_bis($db, (int)$b['besitzer_id']);
+        $r['spielraum'] = round(verlust_stand($db, (int)$b['besitzer_id'], time())['spielraum'], 3);
     }
     return $r;
 }
@@ -740,8 +741,17 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
     $ueberlebende = array_filter(array_map(fn($p) => $p[1], $ergebnis['a']));
     $beute = array_fill_keys(array_keys(RESSOURCEN), 0.0);
     $tresor = tresor($ziel['rate'], $foV);
+    // Verlustdeckel: dieser Angriff darf höchstens min(Einzelgrenze, Spielraum bis zur Tagesgrenze) des Vermögens kosten
+    $grenze = erlaubter_verlust($db, $sid, $verteidiger, $ts);
+    $gekappt = false;
     if ($ergebnis['sieger'] === 'angreifer') {
         $beute = beute($zb, zug_ladung($ueberlebende), $tresor, $beutefaktor);
+        $budget = max(0.0, $grenze * $wertVorher - $verlust);
+        $wertBeute = rohstoff_wert($beute);
+        if ($wertBeute > $budget) {
+            $beute = array_map(fn($x) => floor($x * $budget / $wertBeute), $beute);
+            $gekappt = true;
+        }
         kosten_abziehen($db, $zb['id'], $beute);
         $verlust += rohstoff_wert($beute);
         wiederaufbau_setzen($db, $verteidiger, $ts);
@@ -760,7 +770,8 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
     $bericht = $ergebnis + ['ort' => $zielName, 'angreifer' => $n[$sid] ?? '?', 'verteidiger' => $n[$verteidiger] ?? '?',
                             'beute' => $beute, 'nachgewachsen' => $nachgewachsen, 'graben' => (int)($ziel['stufen']['graben'] ?? 0), 'wehr' => (int)$zb['wehr'],
                             'nacht' => $nacht, 'beutefaktor' => round($beutefaktor, 2), 'tresor' => array_map('floor', $tresor),
-                            'schaden' => round($schutz['anteil'], 3), 'schaden_24' => round($schutz['anteil_24'], 3), 'schutz_bis' => $schutz['schutz_bis'],
+                            'schaden' => round($schutz['anteil'], 3), 'schaden_24' => round($schutz['anteil_24'], 3), 'spielraum' => round($schutz['spielraum'], 3),
+                            'sperre_bis' => $schutz['sperre_bis'], 'vollschutz_bis' => $schutz['vollschutz_bis'], 'gekappt' => $gekappt,
                             'wiederaufbau' => $ergebnis['sieger'] === 'angreifer'];
     chronik('raubzug', ort_von_bereich($db, $zb['id']), $ergebnis['sieger'], $ts);
     $ausgang = ['angreifer' => 'gewonnen', 'verteidiger' => 'verloren', 'unentschieden' => 'unentschieden'][$ergebnis['sieger']];
@@ -791,7 +802,7 @@ function bunker_einlagern(string $bid, int $sid, array $einheiten): ?string
         }
         foreach ($einheiten as $typ => $n) {
             if (($z['einheiten'][$typ] ?? 0) < $n) {
-                return 'Hier stehen nicht genug ' . EINHEITEN[$typ]['name'] . ' bereit.';
+                return 'Hier stehen nicht genug Einheiten vom Typ „' . EINHEITEN[$typ]['name'] . '“ bereit.';
             }
         }
         $frei = bunker_plaetze($stufe, $z['fo']) - bunker_belegt($z['bunker']);
@@ -821,7 +832,7 @@ function bunker_auslagern(string $bid, int $sid, array $einheiten): ?string
         }
         foreach ($einheiten as $typ => $n) {
             if (($z['bunker'][$typ] ?? 0) < $n) {
-                return 'Im Bunker sind nicht so viele ' . EINHEITEN[$typ]['name'] . '.';
+                return 'Im Bunker sind nicht so viele Einheiten vom Typ „' . EINHEITEN[$typ]['name'] . '“.';
             }
         }
         foreach ($einheiten as $typ => $n) {

@@ -4,6 +4,10 @@
 > ohne Urlaubsmodus und E-Mail-Warnung (Abschnitt D bleibt offen). Eine bewusste Abweichung: Die Kosten der Forschung
 > Informationsnetz wurden nicht erhöht (C.2), weil sich sonst die Ranglistenpunkte für bereits erforschte Stufen rückwirkend
 > geändert hätten. Spionage wird stattdessen über Kurierpreis und Einsatzgeld teurer.
+>
+> **Nachbesserung (A.4 ersetzt):** Ein Schutz „gegen alle Angreifer“ hätte ein Windhundrennen erzeugt: Wer morgens als Erster
+> alle überfällt, hätte alle anderen ausgesperrt – und ein Verbündeter hätte ein Opfer mit einem Mini-Überfall absichtlich schützen können.
+> Deshalb gilt jetzt Abschnitt **A.5**: persönliche Sperre nur für den Angreifer plus gemeinsamer Verlustdeckel pro Opfer.
 
 **Ziel:** Angreifen bleibt lohnend und Kern des Spiels. Gute Taktik (Timing, Aufklärung, starke Armee) wird weiter voll belohnt.
 Was nicht mehr belohnt wird: ständige Anwesenheit, Ausplündern in Serie und gezieltes „Farmen“ deutlich schwächerer Spieler.
@@ -89,6 +93,31 @@ Damit entspricht der Wunsch „60 % Verlust → 60 % der maximalen Wartezeit“ 
 - **Gegenschlag erlaubt:** Greift ein geschützter Spieler selbst jemanden an, endet sein Schutz **gegenüber diesem einen Spieler**. Sonst könnte er aus dem Schutz heraus angreifen.
 - **Abgewehrter Angriff** (Angreifer verliert) löst keine Schutzzeit aus – der Verteidiger hat ja gewonnen.
 - **Anzeige:** Auf der Karte, in der Zielauswahl unter „Züge“ und im Erkundungsbericht steht „geschützt bis 18:40“ mit Schloss-Symbol. Der Verteidiger sieht seine eigene Schutzzeit im Kopf der Seite.
+
+### A.5 Umgesetzte Fassung: persönliche Sperre + Verlustdeckel
+
+**1. Persönliche Sperre (Angreifer → Opfer).** Nur wer angegriffen hat, ist für dieses Opfer gesperrt:
+
+```
+Sperre = max(T_MIN, S · T_max) / Spieltempo        S = Schaden DIESES Angriffs
+```
+
+**2. Gemeinsamer Verlustdeckel pro Opfer.**
+
+```
+Fenster          = 24 h / Spieltempo
+S_fenster        = 1 − Π(1 − S_i)       über alle gewonnenen/unentschiedenen Angriffe im Fenster
+Spielraum R      = VERLUST_MAX_TAG (50 %) − S_fenster
+Erlaubter Verlust je Angriff = min(VERLUST_MAX_ANGRIFF (25 %), R)
+Beute wird gekürzt, bis Kampfverluste + Beute ≤ erlaubter Verlust · Vermögen (gefallene Einheiten bleiben verloren)
+R < VOLLSCHUTZ_REST (5 %) → Vollschutz für alle, bis genug alte Verluste aus dem Fenster gefallen sind
+```
+
+**3. Rückschlag.** Greift X den Spieler Y an, darf Y einmal (innerhalb 24 h / Tempo) zurückschlagen – trotz Sperre und Vollschutz,
+mit der 25-%-Grenze. Das Recht ist mit dem ersten Rückschlag verbraucht (sonst könnte ein einziger Angriff tagelanges Farmen erlauben).
+
+**Beispiel (Tempo 1):** A überfällt morgens B, C und D (je bis zu 25 %) und ist für jeden einige Stunden gesperrt. E kann B später
+trotzdem überfallen (noch 25 % Spielraum). Danach hat B 50 % erreicht und ist für alle geschützt.
 
 ---
 

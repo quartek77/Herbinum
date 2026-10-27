@@ -545,7 +545,8 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
   function zeigeInfo() {
     const z = ziele.find(x => x.id === wahl.value);
     info.innerHTML = z ? `<span class="chip rel-${z.rel}">${esc(relText[z.rel])}</span> ${esc(z.name)}${z.besitzer ? " · " + esc(z.besitzer) : ""} · ${String(z.km).replace(".", ",")} km Fahrweg` +
-      (z.schutz ? `<br><span class="chip rel-schutz">🛡 geschützt bis ${esc(z.schutz)}</span> Raubzüge erst danach möglich.` : "") +
+      (z.schutz ? `<br><span class="chip rel-schutz">🛡 für dich gesperrt bis ${esc(z.schutz)}</span>` :
+        (z.spielraum !== null && z.spielraum !== undefined ? `<br><span class="chip">noch ${z.spielraum} % Spielraum je Angriff</span>` : "")) +
       (z.sperre ? `<br><span class="chip">Erkundung erst ab ${esc(z.sperre)}</span>` : "") : "";
   }
   function setzeFilter(f) { filter = f; knoepfe.forEach(k => k.setAttribute("aria-pressed", String(k.dataset.filter === f))); }

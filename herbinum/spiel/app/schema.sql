@@ -336,10 +336,12 @@ CREATE TABLE IF NOT EXISTS angriffe_log (
   KEY ix_al_angr (angreifer_id, verteidiger_id, ts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS angriffsschutz (
-  verteidiger_id  INT UNSIGNED PRIMARY KEY,
-  bis_ts          INT UNSIGNED NOT NULL,
-  ausnahmen       VARCHAR(255) NOT NULL DEFAULT ''   -- Spieler-IDs, die der Geschützte selbst angegriffen hat (Gegenschlag)
+CREATE TABLE IF NOT EXISTS angriffssperre (
+  verteidiger_id  INT UNSIGNED NOT NULL,
+  angreifer_id    INT UNSIGNED NOT NULL,
+  bis_ts          INT UNSIGNED NOT NULL DEFAULT 0,   -- persönliche Sperre: so lange darf dieser Angreifer dieses Opfer nicht überfallen
+  frei_bis_ts     INT UNSIGNED NOT NULL DEFAULT 0,   -- Rückschlagrecht: das Opfer hat den Angreifer selbst angegriffen
+  PRIMARY KEY (verteidiger_id, angreifer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS spionage_log (

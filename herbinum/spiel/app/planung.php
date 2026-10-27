@@ -117,7 +117,8 @@ function einsatz_bedarf(string $typ, array $z, int $sid): array
             } else {
                 $h[] = ['text' => 'Für Raubzüge gegen andere Spieler und zur Verteidigung. Gegen Mitglieder der eigenen Allianz gibt es keine Raubzüge.', 'ok' => true];
             }
-            $h[] = ['text' => 'Nach einem Überfall ist das Opfer eine Zeit lang geschützt; gegen deutlich Schwächere gibt es weniger oder keine Beute, und ein Teil der Vorräte liegt immer im Tresor.', 'ok' => null];
+            $h[] = ['text' => 'Nach einem Überfall bist du für dieses Opfer eine Zeit lang gesperrt; mehr als ' . round(VERLUST_MAX_ANGRIFF * 100) . ' % je Angriff verliert niemand. '
+                . 'Gegen deutlich Schwächere gibt es weniger oder keine Beute, und ein Teil der Vorräte liegt immer im Tresor.', 'ok' => null];
             break;
         case 'wallhecke':
         case 'hochsitz':

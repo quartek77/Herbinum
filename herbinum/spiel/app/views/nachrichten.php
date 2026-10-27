@@ -109,6 +109,10 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
           <?php if (isset($i['beutefaktor']) && $i['beutefaktor'] < 1): ?><div><dt>Beutefaktor</dt><dd><?= round($i['beutefaktor'] * 100) ?> % (deutlicher Stärkeunterschied)</dd></div><?php endif ?>
           <?php if (!empty($i['tresor']) && ($i['seite'] ?? '') === 'verteidiger'): ?><div><dt>Im Tresor sicher</dt><dd><?= h($res($i['tresor'])) ?></dd></div><?php endif ?>
           <?php if (isset($i['schaden'])): ?><div><dt>Schaden</dt><dd><?= round($i['schaden'] * 100) ?> % des Vermögens<?= ($i['schaden_24'] ?? 0) > $i['schaden'] + 0.001 ? ' · in 24 h zusammen ' . round($i['schaden_24'] * 100) . ' %' : '' ?></dd></div><?php endif ?>
+          <?php if (!empty($i['gekappt'])): ?><div><dt>Verlustgrenze</dt><dd>Beute gekürzt – mehr als <?= round(VERLUST_MAX_ANGRIFF * 100) ?> % je Angriff bzw. <?= round(VERLUST_MAX_TAG * 100) ?> % in <?= round(SCHUTZ_FENSTER_H / tempo()) ?> h darf niemand verlieren</dd></div><?php endif ?>
+          <?php if (!empty($i['sperre_bis'])): ?><div><dt>Sperre</dt><dd><?= h($i['angreifer']) ?> kann <?= h($i['verteidiger']) ?> erst ab <?= date('d.m. H:i', (int)$i['sperre_bis']) ?> Uhr wieder überfallen</dd></div><?php endif ?>
+          <?php if (!empty($i['vollschutz_bis'])): ?><div><dt>Tagesgrenze</dt><dd><?= h($i['verteidiger']) ?> ist bis <?= date('d.m. H:i', (int)$i['vollschutz_bis']) ?> Uhr für alle geschützt</dd></div>
+          <?php elseif (isset($i['spielraum']) && isset($i['sperre_bis'])): ?><div><dt>Spielraum</dt><dd>andere können <?= h($i['verteidiger']) ?> noch um bis zu <?= round(min(VERLUST_MAX_ANGRIFF, $i['spielraum']) * 100) ?> % je Angriff schwächen</dd></div><?php endif ?>
           <?php if (!empty($i['schutz_bis'])): ?><div><dt>Schutzzeit</dt><dd><?= h($i['verteidiger']) ?> ist bis <?= date('d.m. H:i', (int)$i['schutz_bis']) ?> Uhr vor Raubzügen geschützt</dd></div><?php endif ?>
           <?php if (!empty($i['wiederaufbau']) && ($i['seite'] ?? '') === 'verteidiger'): ?><div><dt>Wiederaufbau</dt><dd>+<?= round(WIEDERAUFBAU_BONUS * 100) ?> % Produktion für <?= dauer((int)round(WIEDERAUFBAU_H * 3600 / tempo())) ?></dd></div><?php endif ?>
         </dl>
@@ -124,7 +128,8 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
           <?php if (!empty($i['vorraete_unbekannt'])): ?><div><dt>Vorräte</dt><dd>nicht erkennbar – die Abschirmung war zu stark</dd></div><?php endif ?>
           <?php if (array_key_exists('einheiten', $i)): ?><div><dt>Einheiten</dt><dd><?= $i['einheiten'] ? h(implode(', ', array_map(fn($t, $c) => $wert($c) . ' × ' . (EINHEITEN[$t]['name'] ?? $t), array_keys($i['einheiten']), $i['einheiten']))) : 'keine' ?></dd></div><?php endif ?>
           <?php if (array_key_exists('bunker_belegt', $i)): ?><div><dt>Bunker</dt><dd><?= $i['bunker_belegt'] ? 'belegt' : 'leer' ?></dd></div><?php endif ?>
-          <?php if (array_key_exists('schutz_bis', $i)): ?><div><dt>Schutzzeit</dt><dd><?= $i['schutz_bis'] ? 'geschützt bis ' . date('d.m. H:i', (int)$i['schutz_bis']) . ' Uhr' : 'keine' ?></dd></div><?php endif ?>
+          <?php if (array_key_exists('vollschutz_bis', $i)): ?><div><dt>Schutz</dt><dd><?= $i['vollschutz_bis'] ? 'Tagesgrenze erreicht – geschützt bis ' . date('d.m. H:i', (int)$i['vollschutz_bis']) . ' Uhr'
+              : 'angreifbar, noch ' . round(min(VERLUST_MAX_ANGRIFF, (float)($i['spielraum'] ?? VERLUST_MAX_TAG)) * 100) . ' % Spielraum je Angriff' ?></dd></div><?php endif ?>
           <?php if (!empty($i['abgefangen'])): ?><div><dt>Verluste</dt><dd><?= (int)$i['abgefangen'] ?> von <?= (int)$i['kuriere'] ?> Kurieren abgefangen – der Spieler weiß, dass du es warst</dd></div><?php endif ?>
           <?php if (!empty($i['sperre_bis'])): ?><div><dt>Nächste Erkundung</dt><dd>ab <?= date('d.m. H:i', (int)$i['sperre_bis']) ?> Uhr</dd></div><?php endif ?>
           <?php if (array_key_exists('gebaeude', $i)): ?><div><dt>Gebäude</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => (GEBAEUDE[$t]['name'] ?? $t) . " {$c}", array_keys($i['gebaeude']), $i['gebaeude']))) ?></dd></div><?php endif ?>
