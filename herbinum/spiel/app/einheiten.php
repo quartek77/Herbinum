@@ -229,6 +229,14 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                 if (array_sum($ladung) > 0) {
                     return 'Kuriere auf Erkundung nehmen keine Ladung mit.';
                 }
+                if ($zielBesitzer !== null) {
+                    if ($bis = spionage_sperre_bis($db, $sid, $zielBesitzer, $jetzt)) {
+                        return 'Diesen Spieler kannst du erst ab ' . date('d.m. H:i', $bis) . ' Uhr wieder erkunden.';
+                    }
+                    if (erkundung_unterwegs($db, $sid, $zielBesitzer)) {
+                        return 'Zu diesem Spieler ist schon eine Erkundung von dir unterwegs.';
+                    }
+                }
                 break;
             case 'angriff':
                 if ($zielBesitzer === null || $zielBesitzer === $sid) {
@@ -248,6 +256,10 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                 }
                 if (gleiche_genossenschaft($db, $sid, $zielBesitzer)) {
                     return 'Ihr seid in derselben Allianz – untereinander gibt es keine Raubzüge.';
+                }
+                $erlaubt = raubzug_erlaubt($db, $sid, $zielBesitzer, $jetzt);
+                if (is_string($erlaubt)) {
+                    return $erlaubt;
                 }
                 break;
             case 'kolonisieren':
@@ -269,8 +281,11 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
         $verbrauch = zug_verbrauch($einheiten, $km, $auftrag);
         $bedarf = $ladung;
         $bedarf['korn'] += $verbrauch;
+        // Erkundung eines Spielers kostet Einsatzgeld (Ausrüstung, Bestechung)
+        $einsatz = $auftrag === 'erkunden' && $zielBesitzer !== null ? spionage_kosten((int)($z['fo']['dorftratsch'] ?? 0)) : 0;
+        $bedarf['taler'] += $einsatz;
         if ($f = kosten_pruefen($b, $bedarf)) {
-            return $f . ($verbrauch ? ' (Die Fahrt kostet ' . zahl($verbrauch) . ' Nahrung.)' : '');
+            return $f . ($verbrauch ? ' (Die Fahrt kostet ' . zahl($verbrauch) . ' Nahrung.)' : '') . ($einsatz ? ' (Die Erkundung kostet ' . zahl($einsatz) . ' Euro Einsatzgeld.)' : '');
         }
         // Bei Sturm, Hochwasser und Co. am Start dauert die Fahrt länger
         $dauer = (int)round(reisezeit($km, zug_tempo($einheiten, $z['fo']), tempo()) * ereignis_zugfaktor($b, $jetzt));
@@ -282,6 +297,9 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                       VALUES (?, ?, ?, ?, 'hin', ?, ?, ?, ?, ?, ?, ?, ?)")
            ->execute([$sid, $startId, $zielId, $auftrag, $jetzt, $jetzt + $dauer, $jetzt + 2 * $dauer, json_encode($einheiten),
                       $ladung['holz'], $ladung['ziegel'], $ladung['korn'], $ladung['taler']]);
+        if ($auftrag === 'angriff') {
+            gegenschlag_freigeben($db, $sid, $zielBesitzer);     // wer aus dem Schutz heraus angreift, darf von diesem Ziel zurückbekommen
+        }
         return null;
     });
 }
@@ -425,12 +443,7 @@ function zug_ankunft(PDO $db, array $zug): void
             return;
 
         case 'erkunden':
-            nachricht($db, $sid, $ts, 'bericht', "Erkundung: {$zielName}", erkundungsbericht($db, $zug, $ziel));
-            if ($besitzer !== null && $besitzer !== $sid) {
-                nachricht($db, $besitzer, $ts, 'warnung', "Ein fremder E-Bike-Kurier war in {$zielName}", ['text' => 'Jemand hat sich bei dir umgesehen.']);
-                chronik('erkundung', ort_von_bereich($db, $zug['ziel_id']), '', $ts);
-            }
-            zug_umkehren($db, $zug, false);
+            erkundung_ankunft($db, $zug, $ziel, $zielName, $besitzer === $sid ? null : $besitzer);
             return;
 
         case 'angriff':
@@ -444,7 +457,14 @@ function zug_ankunft(PDO $db, array $zug): void
                 zug_umkehren($db, $zug, false);
                 return;
             }
-            raubzug_ausfuehren($db, $zug, $ziel, $zielName, $besitzer);
+            // Schutzzeit und Stärkeverhältnis gelten auch für Züge, die schon unterwegs waren
+            $erlaubt = raubzug_erlaubt($db, $sid, $besitzer, $ts);
+            if (is_string($erlaubt)) {
+                nachricht($db, $sid, $ts, 'kampf', "Raubzug nach {$zielName} kehrt um", ['text' => $erlaubt]);
+                zug_umkehren($db, $zug, false);
+                return;
+            }
+            raubzug_ausfuehren($db, $zug, $ziel, $zielName, $besitzer, $erlaubt);
             return;
 
         case 'kolonisieren':
@@ -490,17 +510,22 @@ function zug_rueckkehr(PDO $db, array $zug): void
     $db->prepare('DELETE FROM zuege WHERE id = ?')->execute([$zug['id']]);
 }
 
+/** Angriffs- und Abwehrwert einer Erkundung. */
+function spionage_werte(array $foA, array $foV, int $kuriere, array $einheitenZiel): array
+{
+    $a = (int)($foA['dorftratsch'] ?? 0) + log(max(1, $kuriere), 2);
+    $d = (int)($foV['abschirmung'] ?? 0) + 0.05 * (int)($einheitenZiel['hochsitz'] ?? 0) + 0.01 * (int)($einheitenZiel['schuetze'] ?? 0);
+    return [$a, $d];
+}
+
 /**
- * Was der Kurier sieht, hängt vom Informationsnetz-Vorsprung ab (plus einem Bonus für mehrere Kuriere):
- * immer Vorräte, ab 1 Einheiten, ab 2 Gebäude, ab 3 Forschung.
+ * Was der Kurier sieht, hängt vom Vorsprung V = Angriffswert − Abwehrwert ab (siehe spionage_genauigkeit):
+ * Vorräte als Spanne, ab 1 Einheiten ungefähr, ab 2 genau und Gebäude, ab 3 Forschung, Schutzzeit und ob der Bunker belegt ist.
+ * Ohne $vorsprung wird er ohne Zufall berechnet.
  */
-function erkundungsbericht(PDO $db, array $zug, array $ziel): array
+function erkundungsbericht(PDO $db, array $zug, array $ziel, ?float $vorsprung = null): array
 {
     $b = $ziel['bereich'];
-    $eigeneFo = forschung_laden($db, (int)$zug['spieler_id']);
-    $fremdeFo = $b['besitzer_id'] ? forschung_laden($db, (int)$b['besitzer_id']) : [];
-    $kuriere = (int)(zug_einheiten($zug)['fahrradkurier'] ?? 1);
-    $tiefe = ($eigeneFo['dorftratsch'] ?? 0) - ($fremdeFo['dorftratsch'] ?? 0) + (int)floor(log(max(1, $kuriere), 2));
     $besitzer = null;
     if ($b['besitzer_id']) {
         $st = $db->prepare('SELECT name FROM spieler WHERE id = ?');
@@ -510,19 +535,89 @@ function erkundungsbericht(PDO $db, array $zug, array $ziel): array
     $r = [
         'besitzer' => $besitzer,
         'werte' => ['Bauplätze' => (int)$b['bauplaetze'], 'Lebensqualität' => (int)$b['lebensqualitaet'], 'Wehrkraft' => (int)$b['wehr'], 'Einkommen' => (int)$b['einkommen']],
-        'vorraete' => $besitzer ? ['holz' => floor($b['holz']), 'ziegel' => floor($b['ziegel']), 'korn' => floor($b['korn']), 'taler' => floor($b['taler'])] : null,
-        'tiefe' => $tiefe,
+        'vorraete' => null,
     ];
-    if ($besitzer && $tiefe >= 1) {
+    if (!$besitzer) {
+        return $r;
+    }
+    $fremdeFo = forschung_laden($db, (int)$b['besitzer_id']);
+    if ($vorsprung === null) {
+        [$a, $d] = spionage_werte(forschung_laden($db, (int)$zug['spieler_id']), $fremdeFo, (int)(zug_einheiten($zug)['fahrradkurier'] ?? 1), $ziel['einheiten']);
+        $vorsprung = $a - $d;
+    }
+    $r['tiefe'] = round($vorsprung, 1);
+    $zufall = fn() => mt_rand(0, 1000) / 1000;
+    if ($genau = spionage_genauigkeit($vorsprung)) {
+        $r['vorraete'] = array_map(fn($r2) => spanne((float)$b[$r2], $genau, $zufall()), array_combine(array_keys(RESSOURCEN), array_keys(RESSOURCEN)));
+    } else {
+        $r['vorraete_unbekannt'] = true;
+    }
+    if ($vorsprung >= 2) {
         $r['einheiten'] = $ziel['einheiten'];
-    }
-    if ($besitzer && $tiefe >= 2) {
         $r['gebaeude'] = $ziel['stufen'];
+    } elseif ($vorsprung >= 1) {
+        $r['einheiten'] = array_map(fn($n) => spanne((float)$n, 0.25, $zufall()), $ziel['einheiten']);
     }
-    if ($besitzer && $tiefe >= 3) {
+    if ($vorsprung >= 3) {
         $r['forschung'] = $fremdeFo;
+        $r['bunker_belegt'] = bunker_belegt($ziel['bunker']) > 0;
+        $r['schutz_bis'] = angriffsschutz_bis($db, (int)$b['besitzer_id']);
     }
     return $r;
+}
+
+/** Ankunft einer Erkundung: Abfangen, Bericht, Sperre, Benachrichtigung des Erkundeten. */
+function erkundung_ankunft(PDO $db, array $zug, array $ziel, string $zielName, ?int $besitzer): void
+{
+    $ts = (int)$zug['ankunft_ts'];
+    $sid = (int)$zug['spieler_id'];
+    if ($besitzer === null) {
+        nachricht($db, $sid, $ts, 'bericht', "Erkundung: {$zielName}", erkundungsbericht($db, $zug, $ziel));
+        zug_umkehren($db, $zug, false);
+        return;
+    }
+    $einheiten = zug_einheiten($zug);
+    $kuriere = (int)($einheiten['fahrradkurier'] ?? 0);
+    $foA = forschung_laden($db, $sid);
+    $foV = forschung_laden($db, $besitzer);
+    [$a, $d] = spionage_werte($foA, $foV, $kuriere, $ziel['einheiten']);
+    $p = abfang_chance($a, $d);
+    $abgefangen = 0;
+    for ($i = 0; $i < $kuriere; $i++) {
+        $abgefangen += mt_rand() / mt_getrandmax() < $p ? 1 : 0;
+    }
+    $vorsprung = $a - $d + mt_rand(-500, 500) / 1000;
+    $sperre = $ts + (int)round(SPIONAGE_SPERRE_H * 3600 / tempo() * ($abgefangen ? SPIONAGE_SPERRE_ABGEFANGEN : 1));
+    $db->prepare('INSERT INTO spionage_log (ts, spaeher_id, ziel_id, abgefangen, sperre_bis) VALUES (?, ?, ?, ?, ?)')
+       ->execute([$ts, $sid, $besitzer, $abgefangen, $sperre]);
+    $st = $db->prepare('SELECT name FROM spieler WHERE id = ?');
+    $st->execute([$sid]);
+    $spaeher = (string)$st->fetchColumn();
+    $erkannt = $abgefangen > 0 || ((int)($foV['abschirmung'] ?? 0) >= 1 && (int)($foV['abschirmung'] ?? 0) >= (int)($foA['dorftratsch'] ?? 0));
+    nachricht($db, $besitzer, $ts, 'warnung', 'Fremde Kuriere in ' . $zielName . ($erkannt ? " – geschickt von {$spaeher}" : ''), ['text' => $abgefangen
+        ? "Deine Leute haben {$abgefangen} von {$kuriere} Kurieren abgefangen." . ($abgefangen < $kuriere ? ' Der Rest konnte sich umsehen.' : ' Niemand konnte sich umsehen.')
+        : ($erkannt ? 'Jemand hat sich bei dir umgesehen. Deine Abschirmung hat erkannt, wer.' : 'Jemand hat sich bei dir umgesehen. Mehr Abschirmung verrät, wer es war.')]);
+    chronik('erkundung', ort_von_bereich($db, $zug['ziel_id']), '', $ts);
+
+    $einheiten['fahrradkurier'] = $kuriere - $abgefangen;
+    $einheiten = array_filter($einheiten);
+    if ($abgefangen >= $kuriere) {
+        nachricht($db, $sid, $ts, 'bericht', "Erkundung von {$zielName} gescheitert", ['text' => "Alle {$kuriere} Kuriere wurden abgefangen. Der Spieler weiß jetzt, dass du es warst. "
+            . 'Nächster Versuch ab ' . date('d.m. H:i', $sperre) . ' Uhr.']);
+        if (!$einheiten) {
+            $db->prepare('DELETE FROM zuege WHERE id = ?')->execute([$zug['id']]);
+            return;
+        }
+        $db->prepare('UPDATE zuege SET einheiten = ? WHERE id = ?')->execute([json_encode($einheiten), $zug['id']]);
+        zug_umkehren($db, $zug, false);
+        return;
+    }
+    $bericht = erkundungsbericht($db, $zug, $ziel, $vorsprung) + ['abgefangen' => $abgefangen, 'kuriere' => $kuriere, 'sperre_bis' => $sperre];
+    nachricht($db, $sid, $ts, 'bericht', "Erkundung: {$zielName}", $bericht);
+    if ($abgefangen) {
+        $db->prepare('UPDATE zuege SET einheiten = ? WHERE id = ?')->execute([json_encode($einheiten), $zug['id']]);
+    }
+    zug_umkehren($db, $zug, false);
 }
 
 // =====================================================================
@@ -603,29 +698,35 @@ function kampf(array $a, array $v, array $aFo, array $vFo, int $graben, int $weh
     return ['runden' => $runden, 'sieger' => $sieger, 'a' => $paar(array_filter($a), $aNach), 'v' => $paar(array_filter($v), $vNach)];
 }
 
-/** Beute: höchstens BEUTE_ANTEIL jedes Vorrats, gleichmäßig gekürzt, wenn die Ladefläche nicht reicht. */
-function beute(array $vorrat, int $kapazitaet): array
+/**
+ * Beute: höchstens BEUTE_ANTEIL jedes Vorrats ohne den geschützten Tresor-Anteil, mal Beutefaktor (Stärkeverhältnis),
+ * gleichmäßig gekürzt, wenn die Ladefläche nicht reicht.
+ */
+function beute(array $vorrat, int $kapazitaet, array $geschuetzt = [], float $faktor = 1.0): array
 {
     $will = [];
     foreach (RESSOURCEN as $r => $_) {
-        $will[$r] = max(0.0, floor((float)$vorrat[$r] * BEUTE_ANTEIL));
+        $will[$r] = max(0.0, floor(max(0.0, (float)$vorrat[$r] - (float)($geschuetzt[$r] ?? 0)) * BEUTE_ANTEIL * $faktor));
     }
     $summe = array_sum($will);
     $f = $summe > $kapazitaet ? $kapazitaet / $summe : 1.0;
     return array_map(fn($w) => floor($w * $f), $will);
 }
 
-function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, int $verteidiger): void
+function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, int $verteidiger, float $beutefaktor = 1.0): void
 {
     $ts = (int)$zug['ankunft_ts'];
     $sid = (int)$zug['spieler_id'];
     $zb = $ziel['bereich'];
     $nacht = ist_nacht($ts);
-    $ergebnis = kampf(zug_einheiten($zug), $ziel['einheiten'], forschung_laden($db, $sid), forschung_laden($db, $verteidiger),
+    $foV = forschung_laden($db, $verteidiger);
+    $wertVorher = vermoegen($db, $verteidiger, $ts);
+    $ergebnis = kampf(zug_einheiten($zug), $ziel['einheiten'], forschung_laden($db, $sid), $foV,
                       (int)($ziel['stufen']['graben'] ?? 0), (int)$zb['wehr'], null, $nacht);
 
     // Verteidiger: Verluste abziehen, Anlagen wachsen teilweise nach
     $nachgewachsen = [];
+    $verlust = 0.0;
     foreach ($ergebnis['v'] as $typ => [$vor, $nach]) {
         $neu = $nach;
         if (!EINHEITEN[$typ]['beweglich'] && $vor > $nach) {
@@ -633,14 +734,19 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
             $neu += $nachgewachsen[$typ];
         }
         einheiten_aendern($db, $zb['id'], $typ, $neu - $vor);
+        $verlust += max(0, $vor - $neu) * einheit_wert($typ);
     }
 
     $ueberlebende = array_filter(array_map(fn($p) => $p[1], $ergebnis['a']));
     $beute = array_fill_keys(array_keys(RESSOURCEN), 0.0);
+    $tresor = tresor($ziel['rate'], $foV);
     if ($ergebnis['sieger'] === 'angreifer') {
-        $beute = beute($zb, zug_ladung($ueberlebende));
+        $beute = beute($zb, zug_ladung($ueberlebende), $tresor, $beutefaktor);
         kosten_abziehen($db, $zb['id'], $beute);
+        $verlust += rohstoff_wert($beute);
+        wiederaufbau_setzen($db, $verteidiger, $ts);
     }
+    $schutz = schutz_nach_raubzug($db, $sid, $verteidiger, $ts, $ergebnis['sieger'], $wertVorher, $verlust);
     if ($ueberlebende) {
         $db->prepare("UPDATE zuege SET status = 'zurueck', einheiten = ?, holz = ?, ziegel = ?, korn = ?, taler = ? WHERE id = ?")
            ->execute([json_encode($ueberlebende), $beute['holz'], $beute['ziegel'], $beute['korn'], $beute['taler'], $zug['id']]);
@@ -653,7 +759,9 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
     $n = $namen->fetchAll(PDO::FETCH_KEY_PAIR);
     $bericht = $ergebnis + ['ort' => $zielName, 'angreifer' => $n[$sid] ?? '?', 'verteidiger' => $n[$verteidiger] ?? '?',
                             'beute' => $beute, 'nachgewachsen' => $nachgewachsen, 'graben' => (int)($ziel['stufen']['graben'] ?? 0), 'wehr' => (int)$zb['wehr'],
-                            'nacht' => $nacht];
+                            'nacht' => $nacht, 'beutefaktor' => round($beutefaktor, 2), 'tresor' => array_map('floor', $tresor),
+                            'schaden' => round($schutz['anteil'], 3), 'schaden_24' => round($schutz['anteil_24'], 3), 'schutz_bis' => $schutz['schutz_bis'],
+                            'wiederaufbau' => $ergebnis['sieger'] === 'angreifer'];
     chronik('raubzug', ort_von_bereich($db, $zb['id']), $ergebnis['sieger'], $ts);
     $ausgang = ['angreifer' => 'gewonnen', 'verteidiger' => 'verloren', 'unentschieden' => 'unentschieden'][$ergebnis['sieger']];
     nachricht($db, $sid, $ts, 'kampf', "Raubzug auf {$zielName}: {$ausgang}", $bericht + ['seite' => 'angreifer']);

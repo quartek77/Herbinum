@@ -105,7 +105,10 @@ function einsatz_bedarf(string $typ, array $z, int $sid): array
             $h[] = ['text' => 'Verbraucht ' . EINHEITEN['trecker']['korn_km'] . ' ' . RESSOURCEN['korn'] . ' pro km, bei Transporten für Hin- und Rückweg.', 'ok' => null];
             break;
         case 'fahrradkurier':
-            $h[] = ['text' => 'Erkundet fremde Bereiche. Mehr verrät die Forschung ' . FORSCHUNG['dorftratsch']['name'] . ' (du hast Stufe ' . (int)($fo['dorftratsch'] ?? 0) . ').', 'ok' => null];
+            $h[] = ['text' => 'Erkundet fremde Bereiche. Jede Erkundung eines Spielers kostet ' . zahl(spionage_kosten((int)($fo['dorftratsch'] ?? 0)))
+                . ' Euro Einsatzgeld; denselben Spieler nur alle ' . dauer((int)round(SPIONAGE_SPERRE_H * 3600 / tempo())) . '.', 'ok' => null];
+            $h[] = ['text' => 'Berichte sind Schätzungen. Genauer wird es mit ' . FORSCHUNG['dorftratsch']['name'] . ' (du hast Stufe ' . (int)($fo['dorftratsch'] ?? 0)
+                . ') und mehr Kurieren; die ' . FORSCHUNG['abschirmung']['name'] . ' des Gegners fängt Kuriere ab.', 'ok' => null];
             break;
         case 'schuetze':
         case 'reiter':
@@ -114,6 +117,7 @@ function einsatz_bedarf(string $typ, array $z, int $sid): array
             } else {
                 $h[] = ['text' => 'Für Raubzüge gegen andere Spieler und zur Verteidigung. Gegen Mitglieder der eigenen Allianz gibt es keine Raubzüge.', 'ok' => true];
             }
+            $h[] = ['text' => 'Nach einem Überfall ist das Opfer eine Zeit lang geschützt; gegen deutlich Schwächere gibt es weniger oder keine Beute, und ein Teil der Vorräte liegt immer im Tresor.', 'ok' => null];
             break;
         case 'wallhecke':
         case 'hochsitz':

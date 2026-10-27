@@ -42,6 +42,7 @@ $spalte('spieler', 'chat_allianz', 'INT UNSIGNED NOT NULL DEFAULT 0');
 $spalte('spieler', 'chat_privat', 'INT UNSIGNED NOT NULL DEFAULT 0');
 $spalte('spieler', 'zeitung_tag', 'INT UNSIGNED NOT NULL DEFAULT 0');
 $spalte('genossenschaften', 'wappen', "VARCHAR(64) NOT NULL DEFAULT ''");
+$spalte('spieler', 'wiederaufbau_bis_ts', 'INT UNSIGNED NOT NULL DEFAULT 0');
 foreach (['musik' => MUSIK_DIR, 'wappen' => WAPPEN_DIR] as $n => $ordner) {
     if (!is_dir($ordner) && !mkdir($ordner, 0755, true)) {
         echo "Achtung: Ordner public/uploads/{$n} konnte nicht angelegt werden – bitte per FTP anlegen.\n";

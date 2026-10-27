@@ -82,7 +82,7 @@ function bereich_aktualisieren(PDO $db, string $bid, int $jetzt): array
     $b['stand_ts'] = $jetzt;
     $werkstatt = werkstatt_abarbeiten($db, $bid, $jetzt);
     $auslagerung = bunker_abarbeiten($db, $bid, $jetzt);
-    return ['bereich' => $b, 'stufen' => $lv, 'queue' => $queue, 'rate' => produktion($b, $lv, tempo(), $fo, ereignis_mods($b, $jetzt)),
+    return ['bereich' => $b, 'stufen' => $lv, 'queue' => $queue, 'rate' => produktion($b, $lv, tempo(), $fo, produktions_mods($b, $jetzt)),
             'fo' => $fo, 'einheiten' => einheiten_laden($db, $bid), 'werkstatt' => $werkstatt,
             'bunker' => bunker_laden($db, $bid), 'auslagerung' => $auslagerung];
 }
@@ -97,6 +97,7 @@ function produzieren_zeitraum(array &$res, array $b, array $lv, array $fo, int $
         return;
     }
     $grenzen = [$von, $bis];
+    $wa = $b['besitzer_id'] ? wiederaufbau_bis((int)$b['besitzer_id']) : 0;
     foreach (alle_ereignisse() as $e) {
         foreach ([(int)$e['start_ts'], (int)$e['ende_ts']] as $g) {
             if ($g > $von && $g < $bis) {
@@ -104,13 +105,29 @@ function produzieren_zeitraum(array &$res, array $b, array $lv, array $fo, int $
             }
         }
     }
+    if ($wa > $von && $wa < $bis) {
+        $grenzen[] = $wa;
+    }
     sort($grenzen);
     for ($i = 1, $n = count($grenzen); $i < $n; $i++) {
         [$a, $e] = [$grenzen[$i - 1], $grenzen[$i]];
         if ($e > $a) {
-            produzieren($res, produktion($b, $lv, tempo(), $fo, ereignis_mods($b, intdiv($a + $e, 2))), $e - $a);
+            produzieren($res, produktion($b, $lv, tempo(), $fo, produktions_mods($b, intdiv($a + $e, 2), $wa)), $e - $a);
         }
     }
+}
+
+/** Faktoren für die Produktion: Ereignisse plus Wiederaufbauhilfe nach einem verlorenen Raubzug. */
+function produktions_mods(array $b, int $ts, ?int $wiederaufbauBis = null): array
+{
+    $mod = ereignis_mods($b, $ts);
+    $wa = $wiederaufbauBis ?? ($b['besitzer_id'] ? wiederaufbau_bis((int)$b['besitzer_id']) : 0);
+    if ($ts < $wa) {
+        foreach (['holz', 'ziegel', 'korn', 'taler'] as $k) {
+            $mod[$k] = ($mod[$k] ?? 0) + WIEDERAUFBAU_BONUS;
+        }
+    }
+    return $mod;
 }
 
 function bunker_laden(PDO $db, string $bid): array

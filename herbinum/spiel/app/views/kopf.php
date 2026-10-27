@@ -29,7 +29,7 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($titel) ?> · Herbinum</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 </head>
 <body data-jetzt="<?= time() ?>" data-csrf="<?= h(csrf_token()) ?>" class="phase-<?= h($zeit['phase']) ?><?= $vertretung ? ' in-vertretung' : '' ?>">
 <?php require __DIR__ . '/icons.php'; ?>
@@ -133,6 +133,14 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
   </div>
 </div>
 
+<?php
+$meinSchutz = angriffsschutz_bis(db(), (int)$spieler['id']);
+$meinWiederaufbau = wiederaufbau_bis((int)$spieler['id']);
+if ($meinSchutz || $meinWiederaufbau > time()): ?>
+  <div class="schutz-band" role="status"><span aria-hidden="true">🛡</span>
+    <span><?= $meinSchutz ? '<b>Schutzzeit</b> bis ' . date('d.m. H:i', $meinSchutz) . ' Uhr – niemand kann dich überfallen. Greifst du selbst jemanden an, darf dieser zurückschlagen.' : '' ?>
+      <?= $meinWiederaufbau > time() ? ' <b>Wiederaufbauhilfe:</b> +' . round(WIEDERAUFBAU_BONUS * 100) . ' % Produktion bis ' . date('H:i', $meinWiederaufbau) . ' Uhr.' : '' ?></span></div>
+<?php endif ?>
 <?php foreach ($wetterJetzt as ['e' => $e, 's' => $s]):
     $def = EREIGNISSE[$e['typ']];
     $wirk = [];

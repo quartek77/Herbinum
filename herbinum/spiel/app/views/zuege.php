@@ -14,6 +14,7 @@ $label = fn(string $id) => isset($namen[$id]) ? $namen[$id]['ort'] . ' · ' . $n
 $meineGid = (int)($gen['id'] ?? 0);
 // Ziele mit Entfernung und Beziehung (eigen, allianz, fremd, frei); Orte nach Entfernung zum Startbereich
 $ziele = [];
+$schutzCache = $sperreCache = [];
 $orte = [];
 foreach ($alle as $x) {
     if ($x['id'] === $b['id']) {
@@ -21,8 +22,16 @@ foreach ($alle as $x) {
     }
     $km = strecke_km($b, $x);
     $rel = $x['besitzer_id'] === null ? 'frei' : ((int)$x['besitzer_id'] === $sid ? 'eigen' : ($meineGid && (int)$x['gid'] === $meineGid ? 'allianz' : 'fremd'));
+    // Schutzzeit und Erkundungssperre gegenüber fremden Spielern (einmal je Spieler ermittelt)
+    if ($rel === 'fremd') {
+        $bes = (int)$x['besitzer_id'];
+        $schutzCache[$bes] ??= angriffsschutz_bis(db(), $bes, $sid);
+        $sperreCache[$bes] ??= spionage_sperre_bis(db(), $sid, $bes) ?? 0;
+    }
     $ziele[] = ['id' => $x['id'], 'ort' => $x['ort_id'], 'nr' => (int)$x['nr'], 'name' => $x['name'], 'km' => round($km, 1), 'rel' => $rel,
-                'besitzer' => $x['besitzer'] ? $x['besitzer'] . ($x['kuerzel'] ? " [{$x['kuerzel']}]" : '') : ''];
+                'besitzer' => $x['besitzer'] ? $x['besitzer'] . ($x['kuerzel'] ? " [{$x['kuerzel']}]" : '') : '',
+                'schutz' => $rel === 'fremd' && $schutzCache[$bes] ? date('d.m. H:i', $schutzCache[$bes]) : '',
+                'sperre' => $rel === 'fremd' && $sperreCache[$bes] ? date('d.m. H:i', $sperreCache[$bes]) : ''];
     $o = &$orte[$x['ort_id']];
     $o ??= ['id' => $x['ort_id'], 'name' => $x['ort'], 'km' => INF, 'frei' => 0, 'besetzt' => 0, 'eigen' => 0];
     $o['km'] = min($o['km'], $km);
@@ -170,6 +179,15 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
         </ol>
       </section>
     <?php endif ?>
+    <section class="karte-box">
+      <h2>Faire Regeln</h2>
+      <ul class="regeln-fair">
+        <li><b>Schutzzeit:</b> Nach einem Überfall ist das Opfer eine Zeit lang vor allen Raubzügen sicher – je größer der Schaden und je schwächer das Opfer, desto länger (höchstens <?= round(SCHUTZ_T_BASIS_H * (1 + SCHUTZ_K_SCHWAECHE) / tempo(), 1) ?> h).</li>
+        <li><b>Tresor:</b> <?= round(TRESOR_BASIS * 100) ?> % des Lagers sind nie erbeutbar, mit Sicherheitstechnik bis <?= round(TRESOR_MAX * 100) ?> %.</li>
+        <li><b>Stärke:</b> Gegen Spieler unter <?= round(STAERKE_SPERRE * 100) ?> % deiner Punkte gibt es keine Raubzüge, bis <?= round(STAERKE_VOLL * 100) ?> % weniger Beute – außer sie haben dich zuerst angegriffen.</li>
+        <li><b>Erkundung:</b> kostet Einsatzgeld, liefert Schätzungen, Kuriere können abgefangen werden; denselben Spieler nur alle <?= round(SPIONAGE_SPERRE_H / tempo(), 1) ?> h.</li>
+      </ul>
+    </section>
     <section class="karte-box">
       <h2>Bereiche</h2>
       <p class="leise">Du hast <?= anzahl_bereiche(db(), $sid) ?> von <?= max_bereiche($z['fo']) ?> erlaubten Bereichen (inklusive Siedlerkonvois unterwegs). Mehr erlaubt die Forschung <a href="?s=forschung">Verwaltung</a>.</p>

@@ -475,3 +475,11 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 .ki-einstellungen fieldset { margin: 0; display: grid; gap: 6px; }
 @media (max-width: 960px) { .online-anzeige { display: none; } }
 @media (max-width: 960px) { .berater-raster { grid-template-columns: 1fr; } .berater-msg { max-width: 100%; } }
+
+/* ---------- Version 8: Fairness ---------- */
+.schutz-band { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+.schutz-band > span:first-child { font-size: 20px; }
+.regeln-fair { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-soft); }
+.regeln-fair b { color: var(--ink); }
+.chip.rel-schutz { color: var(--ok); }
+@media (max-width: 640px) { .schutz-band { margin-left: 16px; margin-right: 16px; } }

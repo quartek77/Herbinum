@@ -212,7 +212,8 @@ Spielregeln (Werte pro Stunde, Spieltempo ist im JSON angegeben):
 Rohstoffe: {$res}. Strom wird nicht gelagert: Sägewerk, Baustoffwerk und Gewächshaus laufen gedrosselt, wenn der Windpark zu wenig liefert. Was über die Lagergrenze hinausgeht, verfällt (Euro ausgenommen).
 Bauzeiten sinken mit der Zentrale. Pro Bereich laufen mehrere Bauaufträge nacheinander; geforscht wird immer nur eine Sache gleichzeitig, bezahlt aus dem Bereich, in dem das Forschungszentrum steht. Forschung gilt für alle Bereiche.
 Weitere Bereiche gibt es per Siedlerkonvoi zu einem freien Bereich; wie viele erlaubt sind, regelt die Forschung Verwaltung (Stufe 1 → 2 Bereiche, 3 → 3, 5 → 4 …).
-Raubzüge nehmen bis zur Hälfte der Vorräte mit; Verteidiger profitieren von Schutzwall, Wehrkraft der Lage und nachts von der Nachtwache. Der Bunker schützt eingelagerte Einheiten. Markt: Händler tauscht mit Verlust (besser durch Handelszentrum und Handelskunde).
+Raubzüge nehmen bis zur Hälfte der ungeschützten Vorräte mit; ein Tresor-Anteil des Lagers (10 %, mit Sicherheitstechnik bis 50 %) ist nie erbeutbar. Verteidiger profitieren von Schutzwall, Wehrkraft der Lage und nachts von der Nachtwache. Der Bunker schützt eingelagerte Einheiten.
+Fairness: Nach einem Überfall ist das Opfer vor allen Raubzügen geschützt (Schutzzeit = Schadensanteil der letzten 24 h × 12 bis 24 h je nach Stärkeunterschied, geteilt durch das Spieltempo). Gegen Spieler unter 20 % der eigenen Punkte gibt es keine Raubzüge, zwischen 20 und 50 % anteilig weniger Beute – außer sie haben zuerst angegriffen. Wer einen Raubzug verliert, produziert 12 h lang 25 % mehr. Erkundungen kosten Einsatzgeld, liefern Schätzungen und sind gegen denselben Spieler nur alle 6 h möglich; Abschirmung fängt Kuriere ab. Markt: Händler tauscht mit Verlust (besser durch Handelszentrum und Handelskunde).
 
 Gebäude:
 {$geb}
@@ -258,7 +259,7 @@ function berater_daten(int $sid): array
             'vorraete' => array_map(fn($k) => (int)floor((float)$b[$k]), array_combine(array_values(RESSOURCEN), array_keys(RESSOURCEN))),
             'produktion_pro_stunde' => array_combine(array_values(RESSOURCEN), array_map(fn($k) => (int)round($r[$k]), array_keys(RESSOURCEN))),
             'lagergrenze' => (int)$r['lager'], 'strom' => (int)$r['strom_prod'] . ' von ' . (int)$r['strom_bedarf'] . ' benötigt',
-            'einwohner' => (int)$r['einwohner'], 'bauland' => bauland_belegt($z['stufen'], $z['queue']) . ' von ' . ($b['bauplaetze'] * BAULAND_JE_BAUPLATZ),
+            'einwohner' => (int)$r['einwohner'], 'im_tresor_sicher' => kosten_text(array_map('floor', tresor($r, $fo))), 'bauland' => bauland_belegt($z['stufen'], $z['queue']) . ' von ' . ($b['bauplaetze'] * BAULAND_JE_BAUPLATZ),
             'gebaeude' => array_combine(array_map(fn($t) => GEBAEUDE[$t]['name'] ?? $t, array_keys($z['stufen'])), array_values($z['stufen'])),
             'im_bau' => array_map(fn($q) => (GEBAEUDE[$q['typ']]['name'] ?? $q['typ']) . " Stufe {$q['ziel_stufe']}, fertig in " . dauer((int)$q['ende_ts'] - time()), $z['queue']),
             'naechste_stufen' => $naechste,
@@ -287,6 +288,8 @@ function berater_daten(int $sid): array
         'jetzt' => date('d.m.Y H:i'), 'spieltempo' => tempo(),
         'bereiche_erlaubt' => max_bereiche($fo), 'bereiche_belegt' => anzahl_bereiche($db, $sid),
         'anfaengerschutz_bis' => ($bis = schutz_bis($db, $sid)) ? date('d.m. H:i', $bis) : 'vorbei',
+        'schutzzeit_nach_ueberfall_bis' => ($bis = angriffsschutz_bis($db, $sid)) ? date('d.m. H:i', $bis) : 'keine',
+        'wiederaufbauhilfe_bis' => wiederaufbau_bis($sid) > time() ? date('d.m. H:i', wiederaufbau_bis($sid)) : 'keine',
         'laufende_forschung' => $auftrag ? (FORSCHUNG[$auftrag['typ']]['name'] ?? $auftrag['typ']) . " Stufe {$auftrag['ziel_stufe']}, fertig in " . dauer((int)$auftrag['ende_ts'] - time()) : 'keine',
         'forschung' => $forschung,
         'bereiche' => $bereiche,

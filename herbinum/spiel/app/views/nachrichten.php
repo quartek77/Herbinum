@@ -106,18 +106,31 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
           <div><dt>Runden</dt><dd><?= (int)$i['runden'] ?> · Schutzwall Stufe <?= (int)$i['graben'] ?> · Wehrkraft <?= (int)$i['wehr'] ?><?= !empty($i['nacht']) ? ' · Nachtwache +' . round(NACHT_VERTEIDIGUNG * 100) . ' %' : '' ?></dd></div>
           <?php if (array_sum($i['beute'])): ?><div><dt>Beute</dt><dd><?= h($res($i['beute'])) ?></dd></div><?php endif ?>
           <?php if ($i['nachgewachsen']): ?><div><dt>Nachgewachsen</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => "{$c} × " . EINHEITEN[$t]['name'], array_keys($i['nachgewachsen']), $i['nachgewachsen']))) ?></dd></div><?php endif ?>
+          <?php if (isset($i['beutefaktor']) && $i['beutefaktor'] < 1): ?><div><dt>Beutefaktor</dt><dd><?= round($i['beutefaktor'] * 100) ?> % (deutlicher Stärkeunterschied)</dd></div><?php endif ?>
+          <?php if (!empty($i['tresor']) && ($i['seite'] ?? '') === 'verteidiger'): ?><div><dt>Im Tresor sicher</dt><dd><?= h($res($i['tresor'])) ?></dd></div><?php endif ?>
+          <?php if (isset($i['schaden'])): ?><div><dt>Schaden</dt><dd><?= round($i['schaden'] * 100) ?> % des Vermögens<?= ($i['schaden_24'] ?? 0) > $i['schaden'] + 0.001 ? ' · in 24 h zusammen ' . round($i['schaden_24'] * 100) . ' %' : '' ?></dd></div><?php endif ?>
+          <?php if (!empty($i['schutz_bis'])): ?><div><dt>Schutzzeit</dt><dd><?= h($i['verteidiger']) ?> ist bis <?= date('d.m. H:i', (int)$i['schutz_bis']) ?> Uhr vor Raubzügen geschützt</dd></div><?php endif ?>
+          <?php if (!empty($i['wiederaufbau']) && ($i['seite'] ?? '') === 'verteidiger'): ?><div><dt>Wiederaufbau</dt><dd>+<?= round(WIEDERAUFBAU_BONUS * 100) ?> % Produktion für <?= dauer((int)round(WIEDERAUFBAU_H * 3600 / tempo())) ?></dd></div><?php endif ?>
         </dl>
       <?php endif ?>
-      <?php if ($n['art'] === 'bericht'): ?>
+      <?php if ($n['art'] === 'bericht' && array_key_exists('besitzer', $i)):
+          // Werte als Spanne [von, bis] (ab Version 8) oder genau (ältere Berichte)
+          $wert = fn($v) => is_array($v) ? zahl($v[0]) . '–' . zahl($v[1]) : zahl((float)$v);
+          $resSpanne = fn(array $r) => implode(' · ', array_map(fn($k, $v) => $wert($v) . ' ' . (RESSOURCEN[$k] ?? $k), array_keys($r), $r)); ?>
         <dl class="bericht">
           <div><dt>Besitzer</dt><dd><?= $i['besitzer'] ? h($i['besitzer']) : 'frei – besiedelbar' ?></dd></div>
           <?php foreach ($i['werte'] ?? [] as $k => $v): ?><div><dt><?= h($k) ?></dt><dd><?= (int)$v ?></dd></div><?php endforeach ?>
-          <?php if (!empty($i['vorraete'])): ?><div><dt>Vorräte</dt><dd><?= h($res($i['vorraete'])) ?></dd></div><?php endif ?>
-          <?php if (array_key_exists('einheiten', $i)): ?><div><dt>Einheiten</dt><dd><?= $i['einheiten'] ? h(implode(', ', array_map(fn($t, $c) => "{$c} × " . (EINHEITEN[$t]['name'] ?? $t), array_keys($i['einheiten']), $i['einheiten']))) : 'keine' ?></dd></div><?php endif ?>
+          <?php if (!empty($i['vorraete'])): ?><div><dt>Vorräte</dt><dd><?= h($resSpanne($i['vorraete'])) ?></dd></div><?php endif ?>
+          <?php if (!empty($i['vorraete_unbekannt'])): ?><div><dt>Vorräte</dt><dd>nicht erkennbar – die Abschirmung war zu stark</dd></div><?php endif ?>
+          <?php if (array_key_exists('einheiten', $i)): ?><div><dt>Einheiten</dt><dd><?= $i['einheiten'] ? h(implode(', ', array_map(fn($t, $c) => $wert($c) . ' × ' . (EINHEITEN[$t]['name'] ?? $t), array_keys($i['einheiten']), $i['einheiten']))) : 'keine' ?></dd></div><?php endif ?>
+          <?php if (array_key_exists('bunker_belegt', $i)): ?><div><dt>Bunker</dt><dd><?= $i['bunker_belegt'] ? 'belegt' : 'leer' ?></dd></div><?php endif ?>
+          <?php if (array_key_exists('schutz_bis', $i)): ?><div><dt>Schutzzeit</dt><dd><?= $i['schutz_bis'] ? 'geschützt bis ' . date('d.m. H:i', (int)$i['schutz_bis']) . ' Uhr' : 'keine' ?></dd></div><?php endif ?>
+          <?php if (!empty($i['abgefangen'])): ?><div><dt>Verluste</dt><dd><?= (int)$i['abgefangen'] ?> von <?= (int)$i['kuriere'] ?> Kurieren abgefangen – der Spieler weiß, dass du es warst</dd></div><?php endif ?>
+          <?php if (!empty($i['sperre_bis'])): ?><div><dt>Nächste Erkundung</dt><dd>ab <?= date('d.m. H:i', (int)$i['sperre_bis']) ?> Uhr</dd></div><?php endif ?>
           <?php if (array_key_exists('gebaeude', $i)): ?><div><dt>Gebäude</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => (GEBAEUDE[$t]['name'] ?? $t) . " {$c}", array_keys($i['gebaeude']), $i['gebaeude']))) ?></dd></div><?php endif ?>
           <?php if (array_key_exists('forschung', $i)): ?><div><dt>Forschung</dt><dd><?= $i['forschung'] ? h(implode(', ', array_map(fn($t, $c) => (FORSCHUNG[$t]['name'] ?? $t) . " {$c}", array_keys($i['forschung']), $i['forschung']))) : 'keine' ?></dd></div><?php endif ?>
         </dl>
-        <?php if ($i['besitzer'] && ($i['tiefe'] ?? 0) < 3): ?><p class="leise">Mehr Informationsnetz oder mehr Kuriere verraten mehr.</p><?php endif ?>
+        <?php if ($i['besitzer'] && ($i['tiefe'] ?? 0) < 3): ?><p class="leise">Werte sind Schätzungen. Mehr Informationsnetz oder mehr Kuriere verraten mehr – die Abschirmung des Gegners weniger.</p><?php endif ?>
       <?php endif ?>
     </article>
   <?php endforeach ?>

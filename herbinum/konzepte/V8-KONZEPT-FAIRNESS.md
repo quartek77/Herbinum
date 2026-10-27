@@ -1,5 +1,10 @@
 # Konzept Version 8: Fairness für Gelegenheitsspieler
 
+> **Stand: umgesetzt in Version 8** (Zweig `v8/fairness`) mit den hier vorgeschlagenen Werten, Schutz gegen alle Angreifer,
+> ohne Urlaubsmodus und E-Mail-Warnung (Abschnitt D bleibt offen). Eine bewusste Abweichung: Die Kosten der Forschung
+> Informationsnetz wurden nicht erhöht (C.2), weil sich sonst die Ranglistenpunkte für bereits erforschte Stufen rückwirkend
+> geändert hätten. Spionage wird stattdessen über Kurierpreis und Einsatzgeld teurer.
+
 **Ziel:** Angreifen bleibt lohnend und Kern des Spiels. Gute Taktik (Timing, Aufklärung, starke Armee) wird weiter voll belohnt.
 Was nicht mehr belohnt wird: ständige Anwesenheit, Ausplündern in Serie und gezieltes „Farmen“ deutlich schwächerer Spieler.
 Wer ein paar Stunden nicht online ist, darf etwas verlieren – aber nie alles und nie mehrmals hintereinander.

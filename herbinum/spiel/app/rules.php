@@ -157,6 +157,10 @@ const FORSCHUNG = [
         'kosten' => ['holz' => 300, 'ziegel' => 300, 'taler' => 150], 'faktor' => 1.9, 'braucht' => ['dorfschule' => 1, 'markt' => 1]],
     'bunkerbau' => ['name' => 'Bunkerbau', 'kurz' => '+25 % Bunkerplätze und 10 % schnelleres Auslagern je Stufe.', 'bonus' => 0.25,
         'kosten' => ['holz' => 500, 'ziegel' => 1200, 'taler' => 100], 'faktor' => 1.9, 'braucht' => ['dorfschule' => 2, 'bunker' => 1]],
+    'sicherheitstechnik' => ['name' => 'Sicherheitstechnik', 'kurz' => 'Tresor: +5 % der Lagergrenze je Stufe sind vor Raubzügen sicher (Grundschutz 10 %, höchstens 50 %).', 'bonus' => 0.05,
+        'kosten' => ['holz' => 500, 'ziegel' => 1000, 'taler' => 150], 'faktor' => 1.9, 'braucht' => ['dorfschule' => 2, 'scheune' => 2]],
+    'abschirmung' => ['name' => 'Abschirmung', 'kurz' => 'Spionageabwehr: Fremde Kuriere werden öfter abgefangen und sehen weniger. Abgefangene Späher verraten ihren Auftraggeber.', 'bonus' => 0,
+        'kosten' => ['holz' => 400, 'ziegel' => 800, 'taler' => 200], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 2, 'schuetzenhalle' => 1]],
 ];
 
 function forschungskosten(string $typ, int $stufe): array
@@ -189,7 +193,7 @@ function max_bereiche(array $fo): int
 // ---------------------------------------------------------------------------
 const EINHEITEN = [
     'fahrradkurier' => ['name' => 'E-Bike-Kurier', 'kurz' => 'Schnell und sparsam. Erkundet fremde Bereiche.',
-        'kosten' => ['holz' => 100, 'ziegel' => 300], 'tempo' => 30, 'ladung' => 20, 'korn_km' => 0, 'angriff' => 0, 'leben' => 5,
+        'kosten' => ['holz' => 400, 'ziegel' => 800, 'taler' => 100], 'tempo' => 30, 'ladung' => 20, 'korn_km' => 0, 'angriff' => 0, 'leben' => 5,
         'forschung' => 'paettkes', 'halle' => 'werkstatt', 'beweglich' => true, 'braucht' => ['werkstatt' => 1]],
     'trecker' => ['name' => 'Transporter', 'kurz' => 'Bringt Rohstoffe zu anderen Bereichen und fährt bei Raubzügen die Beute heim.',
         'kosten' => ['holz' => 2000, 'ziegel' => 2000], 'tempo' => 25, 'ladung' => 2500, 'korn_km' => 3, 'angriff' => 0, 'leben' => 300,
@@ -394,3 +398,113 @@ const EREIGNISSE = [
         'wirkung' => [], 'verlust' => ['ziegel' => 0.08, 'holz' => 0.03], 'zug' => 0.0, 'bau_h' => 1.0,
         'text' => 'Ein Beben aus alten Bergbaustollen: Risse in Gebäuden, Baustellen ruhen eine Weile.'],
 ];
+
+// ---------------------------------------------------------------------------
+// Fairness (Version 8): Schutzzeit nach Schaden, Tresor, Beute nach Stärkeverhältnis, Wiederaufbauhilfe, Spionage-Abwehr.
+// Hintergrund und Beispiele: konzepte/V8-KONZEPT-FAIRNESS.md
+// ---------------------------------------------------------------------------
+const SCHUTZ_T_BASIS_H = 12.0;         // Schutzzeit bei gleich starken Gegnern und 100 % Schaden
+const SCHUTZ_K_SCHWAECHE = 1.0;        // Aufschlag für deutlich Schwächere: bis zu (1 + K)-fache Zeit
+const SCHUTZ_T_MIN_H = 1.0;            // auch ein kleiner Erfolg verschafft mindestens diese Pause
+const SCHUTZ_FENSTER_S = 86400;        // Schäden der letzten 24 h zählen zusammen
+const STAERKE_SPERRE = 0.2;            // unter 20 % der Punkte des Angreifers ist kein Raubzug möglich …
+const STAERKE_VOLL = 0.5;              // … ab 50 % gibt es volle Beute, dazwischen anteilig
+const GEGENANGRIFF_S = 72 * 3600;      // wer zuerst angegriffen hat, darf vom Opfer ohne Stärke-Grenze zurückbekommen
+const TRESOR_BASIS = 0.10;             // 10 % der Lagergrenze sind immer sicher …
+const TRESOR_MAX = 0.50;               // … höchstens 50 % (je Stufe Sicherheitstechnik +5 %, siehe FORSCHUNG)
+const TRESOR_EURO_STUNDEN = 6.0;       // Euro: 6 Stunden Produktion sind sicher (+50 % je Stufe Sicherheitstechnik)
+const WIEDERAUFBAU_H = 12.0;           // nach einem verlorenen Raubzug läuft die Produktion so lange …
+const WIEDERAUFBAU_BONUS = 0.25;       // … um 25 % schneller
+const SPIONAGE_SPERRE_H = 6.0;         // denselben Spieler frühestens nach 6 Stunden wieder erkunden (÷ Tempo)
+const SPIONAGE_SPERRE_ABGEFANGEN = 2.0; // nach einer abgefangenen Erkundung doppelt so lange
+const SPIONAGE_EINSATZ_EURO = 100;     // Einsatzkosten je Erkundung eines Spielers …
+const SPIONAGE_EINSATZ_JE_STUFE = 50;  // … plus je Stufe Informationsnetz
+
+/** Längste Schutzzeit in Stunden aus dem Punkteverhältnis r = Verteidiger / Angreifer. */
+function schutz_t_max(float $r): float
+{
+    return SCHUTZ_T_BASIS_H * (1 + SCHUTZ_K_SCHWAECHE * (1 - min(1.0, max(0.0, $r))));
+}
+
+/** Schutzzeit in Sekunden für den Schadensanteil der letzten 24 h (0–1). */
+function schutzzeit_s(float $schaden24, float $r, float $tempo): int
+{
+    return (int)round(max(SCHUTZ_T_MIN_H, max(0.0, min(1.0, $schaden24)) * schutz_t_max($r)) * 3600 / $tempo);
+}
+
+/** Mehrere Schäden zusammenrechnen: 1 − (1 − S1) · (1 − S2) · … */
+function schaden_kombiniert(array $anteile): float
+{
+    $rest = 1.0;
+    foreach ($anteile as $s) {
+        $rest *= 1 - max(0.0, min(1.0, (float)$s));
+    }
+    return 1 - $rest;
+}
+
+/** Beutefaktor aus dem Punkteverhältnis; null = Raubzug nicht erlaubt. */
+function beutefaktor(float $r): ?float
+{
+    if ($r < STAERKE_SPERRE) {
+        return null;
+    }
+    return $r >= STAERKE_VOLL ? 1.0 : ($r - STAERKE_SPERRE) / (STAERKE_VOLL - STAERKE_SPERRE);
+}
+
+/** Wert von Rohstoffen in Grundwert (wie beim Händler). */
+function rohstoff_wert(array $res): float
+{
+    $w = 0.0;
+    foreach (MARKT_WERT as $r => $f) {
+        $w += (float)($res[$r] ?? 0) * $f;
+    }
+    return $w;
+}
+
+/** Wert einer Einheit (Baukosten in Grundwert). */
+function einheit_wert(string $typ): float
+{
+    return isset(EINHEITEN[$typ]) ? rohstoff_wert(EINHEITEN[$typ]['kosten']) : 0.0;
+}
+
+/** Vor Raubzügen geschützte Menge je Rohstoff. $rate: Ergebnis von produktion(). */
+function tresor(array $rate, array $fo): array
+{
+    $st = (int)($fo['sicherheitstechnik'] ?? 0);
+    $anteil = min(TRESOR_MAX, TRESOR_BASIS + FORSCHUNG['sicherheitstechnik']['bonus'] * $st);
+    return ['holz' => $rate['lager'] * $anteil, 'ziegel' => $rate['lager'] * $anteil, 'korn' => $rate['lager'] * $anteil,
+            'taler' => max(0.0, $rate['taler']) * TRESOR_EURO_STUNDEN * (1 + 0.5 * $st)];
+}
+
+/** Einsatzkosten in Euro für eine Erkundung bei Stufe $informationsnetz. */
+function spionage_kosten(int $informationsnetz): int
+{
+    return SPIONAGE_EINSATZ_EURO + SPIONAGE_EINSATZ_JE_STUFE * $informationsnetz;
+}
+
+/** Wahrscheinlichkeit, dass ein einzelner Kurier abgefangen wird. */
+function abfang_chance(float $angriffswert, float $abwehrwert): float
+{
+    return max(0.05, min(0.90, 0.10 + 0.15 * ($abwehrwert - $angriffswert)));
+}
+
+/** Genauigkeit des Erkundungsberichts (± Anteil) je Vorsprung; null = Vorräte nicht erkennbar. */
+function spionage_genauigkeit(float $vorsprung): ?float
+{
+    return match (true) {
+        $vorsprung < 0 => null,
+        $vorsprung < 1 => 0.40,
+        $vorsprung < 2 => 0.20,
+        $vorsprung < 3 => 0.10,
+        default => 0.05,
+    };
+}
+
+/** Spanne um einen Wert, die ihn sicher enthält; $u (0–1) verschiebt die Lage zufällig. */
+function spanne(float $wert, float $genau, float $u): array
+{
+    $breite = 2 * $genau * max(0.0, $wert);
+    $von = max(0.0, $wert - $u * $breite);
+    $runden = $wert >= 10000 ? 500 : ($wert >= 1000 ? 100 : 10);
+    return [(int)(floor($von / $runden) * $runden), (int)(ceil(($von + $breite) / $runden) * $runden)];
+}

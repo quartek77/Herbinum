@@ -320,4 +320,34 @@ CREATE TABLE IF NOT EXISTS ki_log (
   aus         INT UNSIGNED NOT NULL,        -- Ausgabe-Token
   cache       INT UNSIGNED NOT NULL,        -- aus dem Cache gelesene Token
   KEY ix_ki_log_ts (ts)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Version 8 (Schema 7): Fairness – Schutzzeit, Erkundungssperre ----------
+
+CREATE TABLE IF NOT EXISTS angriffe_log (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ts              INT UNSIGNED NOT NULL,
+  angreifer_id    INT UNSIGNED NOT NULL,
+  verteidiger_id  INT UNSIGNED NOT NULL,
+  ergebnis        VARCHAR(12)  NOT NULL,     -- angreifer, verteidiger, unentschieden
+  wert_vorher     DOUBLE NOT NULL,           -- Vermögen des Verteidigers vor dem Kampf (Grundwert)
+  wert_verlust    DOUBLE NOT NULL,           -- Beute + verlorene Einheiten und Anlagen (Grundwert)
+  KEY ix_al_vert (verteidiger_id, ts),
+  KEY ix_al_angr (angreifer_id, verteidiger_id, ts)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS angriffsschutz (
+  verteidiger_id  INT UNSIGNED PRIMARY KEY,
+  bis_ts          INT UNSIGNED NOT NULL,
+  ausnahmen       VARCHAR(255) NOT NULL DEFAULT ''   -- Spieler-IDs, die der Geschützte selbst angegriffen hat (Gegenschlag)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS spionage_log (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ts          INT UNSIGNED NOT NULL,
+  spaeher_id  INT UNSIGNED NOT NULL,
+  ziel_id     INT UNSIGNED NOT NULL,
+  abgefangen  TINYINT UNSIGNED NOT NULL,     -- Zahl der abgefangenen Kuriere
+  sperre_bis  INT UNSIGNED NOT NULL,
+  KEY ix_sp (spaeher_id, ziel_id, ts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

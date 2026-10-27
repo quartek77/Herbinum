@@ -399,7 +399,7 @@ async function karte(root) {
       formen.forEach(({ b: x, p }) => p.setAttribute("stroke-width", x.nr === nr ? 4.5 : 2));
       panel.querySelectorAll(".zeile").forEach(z => z.classList.toggle("sel", +z.dataset.nr === nr));
       $("#bereichinfo").innerHTML = `<div class="karte-box"><div class="eyebrow">Bereich ${b.nr} · ${esc(b.typ)} · ${String(b.ha).replace(".", ",")} ha</div><h2>${esc(b.name)}</h2>
-        <div>${bes ? `${lampe(bes.online)}<span class="punkt" style="background:${esc(bes.farbe)}"></span> <b>${esc(bes.name)}</b>${kuerzelTip(bes)}${bes.eigen ? " (du)" : bes.verbuendet ? " (deine Allianz)" : ""}` : "frei – besiedelbar, sobald es Siedlerkonvois gibt"}</div>
+        <div>${bes ? `${lampe(bes.online)}<span class="punkt" style="background:${esc(bes.farbe)}"></span> <b>${esc(bes.name)}</b>${kuerzelTip(bes)}${bes.schutz && !bes.eigen ? ` <span class="chip rel-schutz">🛡 bis ${esc(bes.schutz)}</span>` : ""}${bes.eigen ? " (du)" : bes.verbuendet ? " (deine Allianz)" : ""}` : "frei – besiedelbar, sobald es Siedlerkonvois gibt"}</div>
         <div class="werte">${[["Bauplätze", (b.felder - 12) / 28 * 100, b.felder], ["Lebensqualität", b.score.lebensqualitaet], ["Wehrkraft", b.score.wehr], ["Einkommen", b.score.einkommen]].map(([n, v, z]) => `<div class="wert"><span>${n}</span><div class="balken"><i style="width:${Math.max(3, v)}%"></i></div><b>${z ?? v}</b></div>`).join("")}</div>
         <div class="boni">${[["Holz", b.mod.holz], ["Baustoffe", b.mod.ziegel], ["Nahrung", b.mod.korn], ["Strom", b.mod.strom]].map(([n, v]) => `<div><span>${n}</span><b>×${v.toFixed(2).replace(".", ",")}</b></div>`).join("")}</div>
         <div class="aktionen">${aktionen(b, bes)}</div></div>`;
@@ -538,13 +538,15 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
     const liste = ziele.filter(z => (ort === "*" ? z.rel === "eigen" || z.rel === "allianz" : z.ort === ort) && passt(z));
     if (ort !== "*") liste.sort((a, b) => a.nr - b.nr);
     wahl.innerHTML = `<option value="">${liste.length ? "– Bereich wählen –" : "– nichts passt zum Filter –"}</option>` + liste.map(z =>
-      `<option value="${esc(z.id)}"${z.id === alt ? " selected" : ""}>${z.nr} · ${esc(z.name)} – ${esc(z.besitzer || "frei")}${z.rel === "eigen" ? " (du)" : ""} · ${String(z.km).replace(".", ",")} km</option>`).join("");
+      `<option value="${esc(z.id)}"${z.id === alt ? " selected" : ""}>${z.nr} · ${esc(z.name)} – ${esc(z.besitzer || "frei")}${z.rel === "eigen" ? " (du)" : ""} · ${String(z.km).replace(".", ",")} km${z.schutz ? " · 🛡 bis " + z.schutz : ""}</option>`).join("");
     zeigeInfo();
     wahl.dispatchEvent(new Event("change", { bubbles: true }));
   }
   function zeigeInfo() {
     const z = ziele.find(x => x.id === wahl.value);
-    info.innerHTML = z ? `<span class="chip rel-${z.rel}">${esc(relText[z.rel])}</span> ${esc(z.name)}${z.besitzer ? " · " + esc(z.besitzer) : ""} · ${String(z.km).replace(".", ",")} km Fahrweg` : "";
+    info.innerHTML = z ? `<span class="chip rel-${z.rel}">${esc(relText[z.rel])}</span> ${esc(z.name)}${z.besitzer ? " · " + esc(z.besitzer) : ""} · ${String(z.km).replace(".", ",")} km Fahrweg` +
+      (z.schutz ? `<br><span class="chip rel-schutz">🛡 geschützt bis ${esc(z.schutz)}</span> Raubzüge erst danach möglich.` : "") +
+      (z.sperre ? `<br><span class="chip">Erkundung erst ab ${esc(z.sperre)}</span>` : "") : "";
   }
   function setzeFilter(f) { filter = f; knoepfe.forEach(k => k.setAttribute("aria-pressed", String(k.dataset.filter === f))); }
   knoepfe.forEach(k => k.onclick = () => { setzeFilter(k.dataset.filter); fuellen(); });

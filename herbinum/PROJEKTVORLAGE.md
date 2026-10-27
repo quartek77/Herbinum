@@ -15,7 +15,7 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
 | Raumschiffe, Flotten | Transporter, E-Bike-Kuriere, Siedlerkonvois, Sicherheitskräfte, Einsatzteams |
 | Allianzen | Allianzen (früher „Genossenschaften“) mit Wappen |
 
-## Umfang (Version 7)
+## Umfang (Version 8)
 
 - **Karte aus OpenStreetMap:** Regionskarte, Ortspläne mit echten Gebäuden/Straßen, 207 Bereiche – automatisch aus der
   Bebauung abgeleitet, nach echten Straßen/Bauerschaften benannt.
@@ -36,6 +36,7 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
   ohne verräterische Details und Blick in den öffentlichen Chat – auf Wunsch von einer KI geschrieben (Stil einstellbar), sonst als Kurzmeldungen.
 - **Planungshilfe „Was brauche ich?“:** an jedem Gebäude, jeder Forschung und Einheit alle fehlenden Stufen in Bau-Reihenfolge mit Kosten –
   bei Einheiten auch, was zum Einsetzen fehlt (z. B. Verwaltung für den Siedlerkonvoi), plus Gesamtkosten und Wartezeit bis einsatzbereit.
+- **Fairness für Gelegenheitsspieler:** Schutzzeit nach Überfällen (Länge = Schaden der letzten 24 h × 12–24 h je nach Stärkeunterschied), Tresor-Anteil im Lager, keine/weniger Beute gegen deutlich Schwächere, Wiederaufbauhilfe nach Niederlagen, Spionage mit Kosten, Unschärfe, Abfangen und Sperrzeit. Ständige Anwesenheit bringt so keinen erdrückenden Vorteil mehr – Taktik schon.
 - **KI-Berater:** Jeder Spieler fragt eine KI nach seinen eigenen Daten („Wann kann ich X erforschen?“, „Was soll ich in welcher Reihenfolge bauen?“);
   mit Anleitung und Beispielfragen, Tageslimit pro Spieler.
 - **Oberfläche:** Seitenleiste mit Gruppen und Icons, Rohstoffleiste mit Lagerbalken, Tageszeit im Kopf, Zielauswahl für Züge in zwei Schritten (Ort nach Entfernung, dann Bereich).
@@ -100,6 +101,8 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
 - **Rückweg einplanen:** Die alte Version muss mit der erweiterten Datenbank weiterlaufen können (neue Tabellen ignoriert sie).
 - **Zielordner genau beschreiben:** Zeigt die Domain auf einen Unterordner (`public/`), muss die Anleitung sagen, welcher Ordner aus dem
   Paket in welchen Ordner auf dem Server gehört – sonst landet der Inhalt von `public` eine Ebene zu hoch und `app` fehlt ganz.
+
+- **Fairness gehört von Anfang an ins Kampfsystem:** Ohne Schutzzeit, Tresor und Stärkeverhältnis „farmen“ Dauer-Online-Spieler Gelegenheitsspieler aus dem Spiel. Die Regeln sollten offen im Spiel stehen – dann sind sie Spielmechanik und keine Diskussion.
 
 ## Offene Ideen
 

@@ -58,7 +58,8 @@ if ($api !== '') {
         foreach ($rows as $r) {
             $out[$r['id']] = ['name' => $r['name'], 'farbe' => $r['farbe'], 'eigen' => (int)$r['sid'] === (int)$spieler['id'],
                               'gen' => $r['kuerzel'], 'verbuendet' => $meineGen !== null && (int)$r['gid'] === (int)$meineGen,
-                              'online' => time() - (int)$r['zuletzt_ts'] <= ONLINE_S, 'gid' => (int)$r['gid'], 'gname' => $r['gname'], 'wappen' => $r['wappen']];
+                              'online' => time() - (int)$r['zuletzt_ts'] <= ONLINE_S, 'gid' => (int)$r['gid'], 'gname' => $r['gname'], 'wappen' => $r['wappen'],
+                              'schutz' => ($schutzBis[(int)$r['sid']] ??= (int)angriffsschutz_bis(db(), (int)$r['sid'], (int)$spieler['id'])) ? date('d.m. H:i', $schutzBis[(int)$r['sid']]) : ''];
         }
         json_aus($out);
     }
