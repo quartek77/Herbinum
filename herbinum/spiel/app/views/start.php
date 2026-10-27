@@ -9,14 +9,14 @@ $max = (int)(config()['spiel']['max_spieler'] ?? 40);
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Herbinum</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 </head>
 <body class="startseite">
 <main class="start">
   <section class="start-text">
     <div class="eyebrow">Ein Aufbauspiel im südlichen Münsterland</div>
     <h1 class="start-titel">Herbinum</h1>
-    <p>21 echte Orte rund um Herbern, jeder mit Vierteln und Bauerschaften, die du besiedeln kannst. Fang mit einer Hofstelle an, bau Holzplatz, Ziegelei, Acker und Windräder – und sieh zu, wie dein Bereich Stück für Stück wächst.</p>
+    <p>21 echte Orte rund um Herbern, jeder mit Vierteln und Ortsteilen, die du besiedeln kannst. Fang mit einer Zentrale an, bau Sägewerk, Baustoffwerk, Gewächshaus und Windparks – und sieh zu, wie dein Bereich Stück für Stück wächst.</p>
     <p class="leise"><?= $anzahl ?> von <?= $max ?> Plätzen vergeben.</p>
   </section>
 
@@ -56,8 +56,8 @@ $max = (int)(config()['spiel']['max_spieler'] ?? 40);
             </option>
           <?php endforeach ?>
         </select>
-        <p class="leise">Du bekommst einen zufälligen freien Bereich in diesem Ort. Dorfkerne und Altstädte sind nicht als Start möglich – die kannst du später besiedeln.</p>
-        <button class="knopf" type="submit">Hofstelle gründen</button>
+        <p class="leise">Du bekommst einen zufälligen freien Bereich in diesem Ort. Ortskerne und Altstädte sind nicht als Start möglich – die kannst du später besiedeln.</p>
+        <button class="knopf" type="submit">Zentrale gründen</button>
       </form>
     <?php endif ?>
   </section>

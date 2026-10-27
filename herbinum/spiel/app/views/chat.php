@@ -19,11 +19,11 @@ if ($kanal === 'privat' && !isset($namen[$partner])) {
 $zeigeVerlauf = $kanal !== 'privat' || isset($namen[$partner]);
 ?>
 <div class="kopfzeile">
-  <div><div class="eyebrow">Dorfplatz, Allianz und unter vier Augen</div><h1>Chat</h1></div>
+  <div><div class="eyebrow">Öffentlich, Allianz und privat</div><h1>Chat</h1></div>
 </div>
 
 <nav class="reiter" aria-label="Kanäle">
-  <a href="?s=chat&amp;k=alle"<?= $kanal === 'alle' ? ' aria-current="page"' : '' ?>>Dorfplatz (alle)<?= $neu['alle'] && $kanal !== 'alle' ? ' <span class="zahlmarke">' . $neu['alle'] . '</span>' : '' ?></a>
+  <a href="?s=chat&amp;k=alle"<?= $kanal === 'alle' ? ' aria-current="page"' : '' ?>>Öffentlich<?= $neu['alle'] && $kanal !== 'alle' ? ' <span class="zahlmarke">' . $neu['alle'] . '</span>' : '' ?></a>
   <?php if ($gen): ?><a href="?s=chat&amp;k=allianz"<?= $kanal === 'allianz' ? ' aria-current="page"' : '' ?>>Allianz [<?= h($gen['kuerzel']) ?>]<?= $neu['allianz'] && $kanal !== 'allianz' ? ' <span class="zahlmarke">' . $neu['allianz'] . '</span>' : '' ?></a><?php endif ?>
   <a href="?s=chat&amp;k=privat"<?= $kanal === 'privat' ? ' aria-current="page"' : '' ?>>Privat<?= $neu['privat'] && $kanal !== 'privat' ? ' <span class="zahlmarke">' . $neu['privat'] . '</span>' : '' ?></a>
 </nav>
@@ -55,16 +55,16 @@ $zeigeVerlauf = $kanal !== 'privat' || isset($namen[$partner]);
     <?php if (!$zeigeVerlauf): ?>
       <p class="leise">Wähle links einen Spieler aus, um ein privates Gespräch zu beginnen.</p>
     <?php else: ?>
-      <h2><?= $kanal === 'privat' ? 'Mit ' . h($namen[$partner]['name']) : ($kanal === 'allianz' ? 'Allianz ' . h($gen['name']) : 'Dorfplatz – alle lesen mit') ?></h2>
+      <h2><?= $kanal === 'privat' ? 'Mit ' . h($namen[$partner]['name']) : ($kanal === 'allianz' ? 'Allianz ' . h($gen['name']) : 'Öffentlicher Chat – alle lesen mit') ?></h2>
       <div class="chat-verlauf" id="chat" data-kanal="<?= h($kanal) ?>" data-partner="<?= $partner ?>" data-admin="<?= (int)$spieler['ist_admin'] ?>" aria-live="polite">
         <p class="leise">Lädt …</p>
       </div>
       <form class="chat-eingabe" id="chat-form" autocomplete="off">
         <label class="sr" for="chat-text">Nachricht</label>
-        <input id="chat-text" name="text" maxlength="<?= CHAT_LAENGE ?>" placeholder="<?= $kanal === 'alle' ? 'Schreib was auf den Dorfplatz …' : 'Nachricht …' ?>" required>
+        <input id="chat-text" name="text" maxlength="<?= CHAT_LAENGE ?>" placeholder="<?= $kanal === 'alle' ? 'Schreib etwas in den öffentlichen Chat …' : 'Nachricht …' ?>" required>
         <button class="knopf" type="submit">Senden</button>
       </form>
-      <?php if ($kanal === 'alle'): ?><p class="leise">Der Dorfplatz ist öffentlich. Der Herbinumer Anzeiger liest mit und greift manchmal Klatsch auf.</p><?php endif ?>
+      <?php if ($kanal === 'alle'): ?><p class="leise">Hier lesen alle mit – auch Herbinum News, die manchmal darüber berichten.</p><?php endif ?>
     <?php endif ?>
   </section>
 </div>

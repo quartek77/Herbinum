@@ -1,6 +1,6 @@
 <?php
 /** @var array $echt */
-$titel = 'Herbinumer Anzeiger';
+$titel = 'Herbinum News';
 $heute = spieltag(time());
 $tag = (int)($_GET['tag'] ?? $heute);
 $ausgabe = $tag === $heute ? zeitung_heute() : zeitung($tag);
@@ -9,7 +9,7 @@ $zeitung_neu = false;
 require __DIR__ . '/kopf.php';
 $archiv = db()->query('SELECT tag FROM zeitung ORDER BY tag DESC LIMIT 8')->fetchAll(PDO::FETCH_COLUMN);
 $i = $ausgabe['inhalt'] ?? [];
-$kiWartet = $ausgabe && $tag === $heute && $ausgabe['quelle'] !== 'ki' && ki_konfiguriert() && (int)einstellung('zeitung_ki_lauf', '0') < time() - 1800;
+$kiWartet = $ausgabe && $tag === $heute && $ausgabe['quelle'] !== 'ki' && zeitung_ki_bereit() && (int)einstellung('zeitung_ki_lauf', '0') < time() - 1800;
 $risikoKlasse = fn(int $p) => $p >= 70 ? 'hoch' : ($p >= 40 ? 'mittel' : 'niedrig');
 ?>
 <?php if (!$ausgabe): ?>
@@ -17,9 +17,8 @@ $risikoKlasse = fn(int $p) => $p >= 70 ? 'hoch' : ($p >= 40 ? 'mittel' : 'niedri
 <?php else: ?>
 <article class="zeitung" id="zeitung" data-ki="<?= $kiWartet ? '1' : '0' ?>">
   <header class="zeitung-kopf">
-    <div class="zeitung-meta"><span><?= h($i['datum'] ?? '') ?></span><span>Ausgabe Nr. <?= (int)$tag ?></span><span><?= $ausgabe['quelle'] === 'ki' ? 'aus der Redaktion' : 'Kurzausgabe' ?></span></div>
-    <div class="zeitung-name">Herbinumer Anzeiger</div>
-    <div class="zeitung-meta"><span>Unabhängig · überparteilich · westfälisch</span><span>Preis: 1 Taler</span></div>
+    <div class="zeitung-name"><span class="live-punkt" aria-hidden="true"></span>Herbinum <b>News</b></div>
+    <div class="zeitung-meta"><span><?= h($i['datum'] ?? '') ?></span><span>Ausgabe #<?= (int)$tag ?></span><span><?= $ausgabe['quelle'] === 'ki' ? 'Redaktion' : 'Kurzmeldungen' ?></span></div>
   </header>
   <?php if ($kiWartet): ?><p class="leise zeitung-hinweis" id="zeitung-status">Die Redaktion schreibt gerade an der ausführlichen Ausgabe …</p><?php endif ?>
   <h1 class="schlagzeile"><?= h($i['titel'] ?? 'Neues aus Herbinum') ?></h1>
@@ -51,7 +50,7 @@ $risikoKlasse = fn(int $p) => $p >= 70 ? 'hoch' : ($p >= 40 ? 'mittel' : 'niedri
           </li>
         <?php endforeach ?>
       </ol>
-      <p class="leise">Je weiter weg, desto unsicherer – der Wetterfrosch irrt sich auch mal.</p>
+      <p class="leise">Je weiter weg, desto unsicherer die Prognose.</p>
     </aside>
   </div>
 </article>

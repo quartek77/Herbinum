@@ -103,7 +103,7 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
         <dl class="bericht">
           <div><dt>Angreifer</dt><dd><?= h($i['angreifer']) ?>: <?= h($seiteText($i['a'])) ?></dd></div>
           <div><dt>Verteidiger</dt><dd><?= h($i['verteidiger']) ?>: <?= h($seiteText($i['v'])) ?></dd></div>
-          <div><dt>Runden</dt><dd><?= (int)$i['runden'] ?> · Graben Stufe <?= (int)$i['graben'] ?> · Wehrkraft <?= (int)$i['wehr'] ?><?= !empty($i['nacht']) ? ' · Nachtwache +' . round(NACHT_VERTEIDIGUNG * 100) . ' %' : '' ?></dd></div>
+          <div><dt>Runden</dt><dd><?= (int)$i['runden'] ?> · Schutzwall Stufe <?= (int)$i['graben'] ?> · Wehrkraft <?= (int)$i['wehr'] ?><?= !empty($i['nacht']) ? ' · Nachtwache +' . round(NACHT_VERTEIDIGUNG * 100) . ' %' : '' ?></dd></div>
           <?php if (array_sum($i['beute'])): ?><div><dt>Beute</dt><dd><?= h($res($i['beute'])) ?></dd></div><?php endif ?>
           <?php if ($i['nachgewachsen']): ?><div><dt>Nachgewachsen</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => "{$c} × " . EINHEITEN[$t]['name'], array_keys($i['nachgewachsen']), $i['nachgewachsen']))) ?></dd></div><?php endif ?>
         </dl>
@@ -117,7 +117,7 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
           <?php if (array_key_exists('gebaeude', $i)): ?><div><dt>Gebäude</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => (GEBAEUDE[$t]['name'] ?? $t) . " {$c}", array_keys($i['gebaeude']), $i['gebaeude']))) ?></dd></div><?php endif ?>
           <?php if (array_key_exists('forschung', $i)): ?><div><dt>Forschung</dt><dd><?= $i['forschung'] ? h(implode(', ', array_map(fn($t, $c) => (FORSCHUNG[$t]['name'] ?? $t) . " {$c}", array_keys($i['forschung']), $i['forschung']))) : 'keine' ?></dd></div><?php endif ?>
         </dl>
-        <?php if ($i['besitzer'] && ($i['tiefe'] ?? 0) < 3): ?><p class="leise">Mehr Dorftratsch oder mehr Kuriere verraten mehr.</p><?php endif ?>
+        <?php if ($i['besitzer'] && ($i['tiefe'] ?? 0) < 3): ?><p class="leise">Mehr Informationsnetz oder mehr Kuriere verraten mehr.</p><?php endif ?>
       <?php endif ?>
     </article>
   <?php endforeach ?>

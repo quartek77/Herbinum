@@ -159,7 +159,7 @@ function einheiten_aendern(PDO $db, string $bid, string $typ, int $delta): void
        ->execute([$bid, $typ, $delta, $delta]);
 }
 
-/** Werkstatt-Aufträge laufen nacheinander; fertige Stücke werden gutgeschrieben. Gibt offene Aufträge zurück. */
+/** Fuhrpark-Aufträge laufen nacheinander; fertige Stücke werden gutgeschrieben. Gibt offene Aufträge zurück. */
 function werkstatt_abarbeiten(PDO $db, string $bid, int $jetzt): array
 {
     $st = $db->prepare('SELECT * FROM werkstattauftraege WHERE bereich_id = ? ORDER BY id');
@@ -263,7 +263,7 @@ function bau_starten(string $bid, int $spielerId, string $typ): ?string
             $db->commit();   // die Nachberechnung bleibt gespeichert
             return $fehler;
         }
-        // Bauzeit hängt von der Hofstelle ab, die zum Baubeginn steht
+        // Bauzeit hängt von der Zentrale ab, die zum Baubeginn steht
         $start = $jetzt;
         $hof = (int)($z['stufen']['hofstelle'] ?? 0);
         foreach ($z['queue'] as $q) {

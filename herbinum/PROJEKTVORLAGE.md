@@ -6,37 +6,42 @@ Kurzbeschreibung eines abgeschlossenen Projekts – als Vorlage und Erfahrungssc
 
 **Herbinum** ist ein browserbasiertes Aufbau- und Strategiespiel nach dem Vorbild von OGame/2Moons – mit einem
 regionalen Setting: 21 echte Orte rund um Ascheberg-Herbern (südliches Münsterland) statt Sonnensystemen.
-Bis zu 40 Spieler aus der Region erkennen ihre Orte, Straßen und Bauerschaften wieder.
+Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit modernem Setting statt Dorfidylle.
 
 | OGame | Herbinum |
 |---|---|
-| Galaxie / Sonnensystem / Planet | Region / Ort / Bereich (Viertel, Bauerschaft) |
-| Metall, Kristall, Deuterium, Energie | Holz, Ziegel, Korn, Taler + Strom, Einwohner |
-| Raumschiffe, Flotten | Trecker, Fahrradkuriere, Siedlertrecks, Schützen, Reiter |
+| Galaxie / Sonnensystem / Planet | Region / Ort / Bereich (Viertel, Ortsteil) |
+| Metall, Kristall, Deuterium, Energie | Holz, Baustoffe, Nahrung, Euro + Strom, Einwohner |
+| Raumschiffe, Flotten | Transporter, E-Bike-Kuriere, Siedlerkonvois, Sicherheitskräfte, Einsatzteams |
 | Allianzen | Allianzen (früher „Genossenschaften“) mit Wappen |
 
-## Umfang (Version 6)
+## Umfang (Version 7)
 
 - **Karte aus OpenStreetMap:** Regionskarte, Ortspläne mit echten Gebäuden/Straßen, 207 Bereiche – automatisch aus der
   Bebauung abgeleitet, nach echten Straßen/Bauerschaften benannt.
 - **Werte pro Bereich aus der echten Lage:** Bauplätze, Lebensqualität, Wehrkraft, Einkommen, Rohstoff-Boni
-  (Wald → Holz, Acker → Korn usw.).
-- **Spielmechanik:** 13 Gebäude mit Bauschleife, 10 Forschungen, 7 Einheiten/Verteidigungsanlagen, Züge (Transport,
+  (Wald → Holz, Ackerland → Nahrung usw.).
+- **Spielmechanik:** 14 Gebäude mit Bauschleife, 12 Forschungen, 7 Einheiten/Verteidigungsanlagen, Züge (Transport,
   Verlegen, Erkunden, Besiedeln, Raubzug), rundenbasierte Kämpfe mit Beute, Anfängerschutz.
-- **Sichtbares Wachstum:** isometrische Ansicht jedes Bereichs – Gebäude, Feldwege, Graben, Hecken wachsen mit den Stufen.
+- **Sichtbares Wachstum:** isometrische Ansicht jedes Bereichs – Gebäude, Wege, Schutzwall und Barrikaden wachsen mit den Stufen.
 - **Gemeinschaft:** Rangliste (OGame-Punkte), Allianzen mit Bewerbung/Vorstand und hochladbarem Wappen, Briefe zwischen allen Spielern,
-  Chat (Dorfplatz, Allianz, privat), Rundschreiben.
-- **Markt:** Händler tauscht eigene Rohstoffe mit Verlust und Tageslimit (besser durch Marktplatz-Ausbau und Forschung „Handelskunde“);
+  Chat (öffentlich, Allianz, privat) mit Online-Lampe an jedem Spielernamen, Wappen-Vorschau am Allianz-Kürzel, Rundschreiben.
+- **Markt:** Händler tauscht eigene Rohstoffe mit Verlust und Tageslimit (besser durch Ausbau des Handelszentrums und Forschung „Handelskunde“);
   ab Handelskunde 2 Schwarzes Brett für Spielerhandel, unter Allianzmitgliedern mit viel geringerer Gebühr.
 - **Bunker:** Einheiten und Fahrzeuge sicher vor Raubzügen und Erkundung einlagern; Auslagern mit Verzögerung; Platz und Tempo per Ausbau und Forschung.
 - **Vertretung:** Berufstätige tragen ein festes Zeitfenster ein; darin steuern sie selbst nicht, die Allianz darf ausgewählte Dinge erledigen (alles protokolliert).
 - **Tag/Nacht und Zufallsereignisse:** Sturm, Frost, Hochwasser, Hagel, Wirtschaftskrise, Zombie-Horde, Erdbeben – selten, gleichzeitig in der
   Region, aber je Bereich unterschiedlich stark, mit begrenztem Schaden. Nachts verteidigt die Nachtwache besser.
-- **Herbinumer Anzeiger:** Tageszeitung mit Wetter und unsicherer Mehrtagesvorhersage der (vorausgeplanten) Ereignisse, Lokalem ohne verräterische
-  Details und Klatsch vom Dorfplatz – auf Wunsch von Claude Sonnet geschrieben, sonst als Vorlage.
+- **Herbinum News:** tägliches Nachrichtenportal mit Wetter und unsicherer Mehrtagesprognose der (vorausgeplanten) Ereignisse, Lagebericht
+  ohne verräterische Details und Blick in den öffentlichen Chat – auf Wunsch von einer KI geschrieben (Stil einstellbar), sonst als Kurzmeldungen.
+- **Planungshilfe „Was brauche ich?“:** an jedem Gebäude, jeder Forschung und Einheit alle fehlenden Stufen in Bau-Reihenfolge mit Kosten –
+  bei Einheiten auch, was zum Einsetzen fehlt (z. B. Verwaltung für den Siedlerkonvoi), plus Gesamtkosten und Wartezeit bis einsatzbereit.
+- **KI-Berater:** Jeder Spieler fragt eine KI nach seinen eigenen Daten („Wann kann ich X erforschen?“, „Was soll ich in welcher Reihenfolge bauen?“);
+  mit Anleitung und Beispielfragen, Tageslimit pro Spieler.
 - **Oberfläche:** Seitenleiste mit Gruppen und Icons, Rohstoffleiste mit Lagerbalken, Tageszeit im Kopf, Zielauswahl für Züge in zwei Schritten (Ort nach Entfernung, dann Bereich).
-- **Spielleitung:** Admin-Bereich mit Spielerverwaltung (sperren, Passwort zurücksetzen, löschen) und Upload eines
-  Hintergrund-Musikloops (lückenlos über Web Audio).
+- **Spielleitung:** Admin-Bereich mit Spielerverwaltung (sperren, Passwort zurücksetzen, löschen), Upload eines
+  Hintergrund-Musikloops (lückenlos über Web Audio), Steuerung der Zufallsereignisse und KI-Einstellungen (Modell je Funktion, Limits,
+  Monatsbudget mit Kostenanzeige).
 
 ## Technik
 
@@ -50,9 +55,15 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte, Straßen und Bauerschaften 
 - **Installer mit Versionsnummer:** `install.php?key=…` legt Tabellen an und ergänzt bei Updates fehlende
   Tabellen/Spalten, ohne Spielstände zu verlieren.
 - **Sicherheit:** Prepared Statements, CSRF-Token, Passwort-Hashes, Login-Drosselung, Upload-Prüfung am Dateiinhalt.
-- **KI ohne SDK:** Die Zeitung ruft die Claude-API per curl auf (Shared Hosting, kein Composer). Der Aufruf läuft einmal pro Spieltag im
-  Hintergrund (`ignore_user_abort`), ein Fehler fällt auf eine Vorlage zurück – das Spiel hängt nie an der KI. Die KI bekommt nur
-  vorab ausgewählte Fakten (keine Spielernamen bei Kämpfen) und soll keine Zahlen erfinden.
+- **KI ohne SDK:** News und Berater rufen die Claude-API per curl auf (Shared Hosting, kein Composer). Standardmodell ist das günstige
+  Claude Haiku 5.5, Sonnet 5.5 ist pro Funktion wählbar. Ein Fehler fällt auf eine Vorlage zurück – das Spiel hängt nie an der KI.
+- **Kosten im Griff:** Jede KI-Anfrage wird mit ihren Token-Zahlen protokolliert; daraus entstehen Kostenanzeige und ein Monatsbudget,
+  bei dessen Erreichen die KI pausiert. Dazu ein Fragen-Limit pro Spieler und Tag.
+- **Rechnen lässt man das Spiel, erklären die KI:** Der Berater bekommt vorab berechnete Wartezeiten („bezahlbar in“), fehlende
+  Voraussetzungen und Kosten statt roher Formeln – so stimmen die Zahlen. Die gleichbleibende Spielanleitung geht als zwischenspeicherbarer
+  Block mit, die aktuellen Daten nur an der neuen Frage; frühere Antworten als reiner Text (ohne Thinking-Blöcke).
+- **Anzeige-Namen getrennt von Schlüsseln:** Gebäude, Einheiten und Rohstoffe haben interne Schlüssel (`hofstelle`, `korn` …) und
+  Anzeigenamen in `rules.php`. Dadurch ließ sich das ganze Spiel im laufenden Betrieb umbenennen, ohne die Datenbank anzufassen.
 - **Ereignisse vorausplanen:** Zufallsereignisse werden Tage im Voraus in der Datenbank geplant. Nur so kann eine Vorhersage stimmen –
   die Unsicherheit wird beim Schreiben der Vorhersage künstlich hinzugefügt. Produktionsänderungen durch Ereignisse fließen in die
   nachträgliche Rohstoffberechnung ein, indem der Zeitraum an Beginn und Ende jedes Ereignisses geteilt wird.
@@ -67,7 +78,10 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte, Straßen und Bauerschaften 
    Ausbaustufe (am Ende 185 Prüfungen), dazu ein Durchklicken im Browser.
 4. **Vor der Auslieferung eine Frischinstallation** aus dem fertigen Upload-Paket in eine leere Datenbank.
 5. **Updates im laufenden Betrieb testen:** mit der *alten* Version einen Spielstand aufbauen, das Update aus dem fertigen ZIP darüberspielen
-   und alle Tabellen vorher/nachher vergleichen (Version 6: identisch, 96 Funktionsprüfungen).
+   und alle Tabellen vorher/nachher vergleichen (Version 6: identisch, 96 Prüfungen; Version 7: 364 Datensätze identisch, 62 neue Prüfungen
+   plus alle alten).
+6. **KI ohne Schlüssel testen:** ein kleiner lokaler Ersatz-Server ahmt die API nach und speichert jede Anfrage – so lassen sich Modell,
+   Header, Verlauf und Fehlerfälle prüfen, ohne Kosten zu verursachen.
 
 ## Stolpersteine beim Live-Gang (für künftige Projekte)
 
@@ -84,8 +98,10 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte, Straßen und Bauerschaften 
 - **Update-Pakete ohne `config.php`** bauen; so kann beim Drüberladen nichts überschrieben werden. Updates dürfen nur Tabellen und Spalten
   ergänzen (`CREATE TABLE IF NOT EXISTS`, Spalte nur anlegen, wenn sie fehlt) – nie bestehende Daten ändern.
 - **Rückweg einplanen:** Die alte Version muss mit der erweiterten Datenbank weiterlaufen können (neue Tabellen ignoriert sie).
+- **Zielordner genau beschreiben:** Zeigt die Domain auf einen Unterordner (`public/`), muss die Anleitung sagen, welcher Ordner aus dem
+  Paket in welchen Ordner auf dem Server gehört – sonst landet der Inhalt von `public` eine Ebene zu hoch und `app` fehlt ganz.
 
 ## Offene Ideen
 
-Gemeinsame Verteidigung in Allianzen (Truppen bei Verbündeten stationieren), Lieferung beim Spielerhandel per Trecker statt sofort,
-weitere KI-Funktionen (Dorftratsch-Berichte, Händler-NPC mit Tageslaune), Saison- und Festtage (Schützenfest, Kirmes) als positive Ereignisse.
+Gemeinsame Verteidigung in Allianzen (Truppen bei Verbündeten stationieren), Lieferung beim Spielerhandel per Transporter statt sofort,
+weitere KI-Funktionen (Händler mit Tageslaune, KI-Lagebericht für die Allianz), positive Ereignisse (Festivals, Förderprogramme).

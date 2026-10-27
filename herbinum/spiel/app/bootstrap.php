@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const APP_DIR = __DIR__;
 define('ROOT_DIR', dirname(__DIR__));
-const SCHEMA_VERSION = 5;               // erhöhen, wenn schema.sql neue Tabellen/Spalten bekommt
+const SCHEMA_VERSION = 6;               // erhöhen, wenn schema.sql neue Tabellen/Spalten bekommt
 const INSTALL_LOCK = APP_DIR . '/.installiert';
 define('MUSIK_DIR', ROOT_DIR . '/public/uploads/musik');
 define('WAPPEN_DIR', ROOT_DIR . '/public/uploads/wappen');
@@ -22,6 +22,8 @@ require APP_DIR . '/ereignisse.php';
 require APP_DIR . '/markt.php';
 require APP_DIR . '/kommunikation.php';
 require APP_DIR . '/vertretung.php';
+require APP_DIR . '/planung.php';
+require APP_DIR . '/ki.php';
 
 /** 0 = nicht installiert; Version 1 schrieb ein Datum in die Sperrdatei. */
 function installierte_version(): int

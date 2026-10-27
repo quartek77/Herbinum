@@ -73,7 +73,7 @@ function rangliste(string $nach = 'gesamt'): array
 {
     $nach = in_array($nach, ['gesamt', 'gebaeude', 'forschung', 'einheiten'], true) ? $nach : 'gesamt';
     $punkte = punkte_alle();
-    $liste = db()->query('SELECT s.id, s.name, s.farbe, s.gesperrt, g.kuerzel, g.id AS gid,
+    $liste = db()->query('SELECT s.id, s.name, s.farbe, s.gesperrt, s.zuletzt_ts, g.kuerzel, g.id AS gid, g.name AS gname, g.wappen,
                                  (SELECT COUNT(*) FROM bereiche b WHERE b.besitzer_id = s.id) AS bereiche
                           FROM spieler s LEFT JOIN genossenschaften g ON g.id = s.genossenschaft_id')->fetchAll();
     foreach ($liste as &$s) {
@@ -314,6 +314,38 @@ function wappen_datei_loeschen(string $name): void
     if ($name !== '' && is_file($pfad)) {
         unlink($pfad);
     }
+}
+
+const ONLINE_S = 300;                   // bis 5 Minuten nach dem letzten Klick gilt man als online
+const KUERZLICH_S = 1800;               // bis 30 Minuten „gerade eben da“
+
+/** Kleine Lampe vor Spielernamen: grün = online, gelb = vor kurzem, grau = länger weg. */
+function online_lampe(int $zuletzt): string
+{
+    $her = time() - $zuletzt;
+    [$klasse, $text] = match (true) {
+        $her <= ONLINE_S => ['an', 'online'],
+        $her <= KUERZLICH_S => ['kuerzlich', 'vor ' . max(1, intdiv($her, 60)) . ' Minuten aktiv'],
+        $zuletzt > 0 => ['aus', 'zuletzt da: ' . date('d.m. H:i', $zuletzt)],
+        default => ['aus', 'noch nie da'],
+    };
+    return '<i class="lampe ' . $klasse . '" title="' . h($text) . '" role="img" aria-label="' . h($text) . '"></i>';
+}
+
+/** Spielername mit Farbe und Online-Lampe. $s braucht name, farbe, zuletzt_ts. */
+function spieler_html(array $s): string
+{
+    return '<span class="spielername">' . online_lampe((int)($s['zuletzt_ts'] ?? 0)) . '<i class="farbpunkt" style="background:' . h((string)$s['farbe']) . '"></i>' . h((string)$s['name']) . '</span>';
+}
+
+/** Allianz-Kürzel als Link; beim Überfahren erscheint das Wappen mit dem Namen. $g braucht id, kuerzel, name, wappen. */
+function kuerzel_html(?array $g): string
+{
+    if (!$g || empty($g['kuerzel'])) {
+        return '';
+    }
+    return '<a class="kuerzel kuerzel-tip" href="?s=allianz&amp;id=' . (int)$g['id'] . '">[' . h($g['kuerzel']) . ']'
+        . '<span class="tip" role="tooltip">' . wappen_html($g, 'wappen tipbild') . '<b>' . h((string)$g['name']) . '</b></span></a>';
 }
 
 /** HTML für das Wappen (oder ein Platzhalter mit dem Kürzel). */

@@ -1,5 +1,5 @@
 <?php
-// Briefe zwischen Spielern und der Chat (Dorfplatz für alle, Allianz, privat).
+// Briefe zwischen Spielern und der Chat (öffentlich für alle, Allianz, privat).
 declare(strict_types=1);
 
 const BRIEFE_JE_STUNDE = 20;
@@ -51,7 +51,7 @@ function brief_senden(int $sid, int $an, string $betreff, string $text): ?string
 // Chat
 // ---------------------------------------------------------------------
 
-const CHAT_KANAELE = ['alle' => 'Dorfplatz', 'allianz' => 'Allianz', 'privat' => 'Privat'];
+const CHAT_KANAELE = ['alle' => 'Öffentlich', 'allianz' => 'Allianz', 'privat' => 'Privat'];
 
 /** Bis zu welcher Nachricht der Spieler je Kanal schon gelesen hat (Spalten chat_alle, chat_allianz, chat_privat). */
 function chat_gesehen(int $sid): array
@@ -77,7 +77,7 @@ function chat_laden(int $sid, string $kanal, int $partner = 0, int $seit = 0, in
 {
     $gen = gen_von($sid);
     $db = db();
-    $sql = 'SELECT c.id, c.kanal, c.von_id, c.an_id, c.ts, c.text, s.name, s.farbe FROM chat c JOIN spieler s ON s.id = c.von_id WHERE c.id > ? AND ';
+    $sql = 'SELECT c.id, c.kanal, c.von_id, c.an_id, c.ts, c.text, s.name, s.farbe, s.zuletzt_ts FROM chat c JOIN spieler s ON s.id = c.von_id WHERE c.id > ? AND ';
     $p = [$seit];
     if ($kanal === 'allianz') {
         if (!$gen) {

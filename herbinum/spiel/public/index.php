@@ -51,13 +51,14 @@ if ($api !== '') {
     }
     $ich = (int)$echt['id'];
     if ($api === 'besitz') {
-        $rows = db()->query('SELECT b.id, s.name, s.farbe, s.id AS sid, s.genossenschaft_id AS gid, g.kuerzel
+        $rows = db()->query('SELECT b.id, s.name, s.farbe, s.id AS sid, s.zuletzt_ts, s.genossenschaft_id AS gid, g.kuerzel, g.name AS gname, g.wappen
                              FROM bereiche b JOIN spieler s ON s.id = b.besitzer_id LEFT JOIN genossenschaften g ON g.id = s.genossenschaft_id')->fetchAll();
         $meineGen = gen_von((int)$spieler['id'])['id'] ?? null;
         $out = [];
         foreach ($rows as $r) {
             $out[$r['id']] = ['name' => $r['name'], 'farbe' => $r['farbe'], 'eigen' => (int)$r['sid'] === (int)$spieler['id'],
-                              'gen' => $r['kuerzel'], 'verbuendet' => $meineGen !== null && (int)$r['gid'] === (int)$meineGen];
+                              'gen' => $r['kuerzel'], 'verbuendet' => $meineGen !== null && (int)$r['gid'] === (int)$meineGen,
+                              'online' => time() - (int)$r['zuletzt_ts'] <= ONLINE_S, 'gid' => (int)$r['gid'], 'gname' => $r['gname'], 'wappen' => $r['wappen']];
         }
         json_aus($out);
     }
@@ -69,6 +70,7 @@ if ($api !== '') {
             chat_gesehen_setzen($ich, $kanal, (int)end($liste)['id']);
         }
         json_aus(['nachrichten' => array_map(fn($c) => ['id' => (int)$c['id'], 'name' => $c['name'], 'farbe' => $c['farbe'], 'ich' => (int)$c['von_id'] === $ich,
+                                                        'online' => time() - (int)$c['zuletzt_ts'] <= ONLINE_S,
                                                         'zeit' => date('H:i', (int)$c['ts']), 'datum' => date('d.m.', (int)$c['ts']), 'text' => $c['text']], $liste),
                   'ungelesen' => chat_ungelesen($ich)]);
     }
@@ -81,6 +83,16 @@ if ($api !== '') {
     if ($api === 'chat_senden') {
         $f = chat_senden($ich, (string)($_POST['kanal'] ?? 'alle'), (int)($_POST['partner'] ?? 0), (string)($_POST['text'] ?? ''));
         json_aus($f ? ['fehler' => $f] : ['ok' => true], $f ? 422 : 200);
+    }
+    if ($api === 'berater') {
+        if ($vertretung) {
+            json_aus(['fehler' => 'In Vertretung gibt es keinen Berater.'], 403);
+        }
+        session_write_close();
+        set_time_limit(120);
+        $r = berater_fragen($ich, (string)($_POST['frage'] ?? ''));
+        json_aus($r + ['html' => isset($r['antwort']) ? berater_html($r['antwort']) : '',
+                       'rest' => max(0, (int)ki_einstellung('ki_berater_limit') - berater_fragen_heute($ich))], isset($r['fehler']) ? 422 : 200);
     }
     if ($api === 'zeitung_ki') {
         // Die Redaktion schreibt im Hintergrund weiter, auch wenn der Spieler die Seite verlässt
@@ -117,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['form'] = ['name' => (string)($_POST['name'] ?? ''), 'ort' => (string)($_POST['ort'] ?? '')];
             weiter('start', ['neu' => 1]);
         }
-        meldung('Willkommen in Herbinum! Deine Hofstelle steht. Bau als Erstes ein Windrad und einen Holzplatz.');
+        meldung('Willkommen in Herbinum! Deine Zentrale steht. Bau als Erstes ein Windpark und einen Sägewerk.');
         weiter('uebersicht');
     }
     if (!$echt) {
@@ -177,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($a === 'forschen') {
         $typ = (string)($_POST['typ'] ?? '');
-        $fertig(forschung_starten($bid, $sid, $typ), 'In der Dorfschule wird jetzt ' . (FORSCHUNG[$typ]['name'] ?? $typ) . ' erforscht.', 'forschung');
+        $fertig(forschung_starten($bid, $sid, $typ), 'In der Forschungszentrum wird jetzt ' . (FORSCHUNG[$typ]['name'] ?? $typ) . ' erforscht.', 'forschung');
     }
     if ($a === 'forschung_abbrechen') {
         $fertig(forschung_abbrechen($sid), 'Forschung abgebrochen, die Kosten wurden erstattet.', 'forschung');
@@ -237,6 +249,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($a === 'vertretung_zurueck') {
         $fertig(vertretung_heute_beenden($sid), 'Willkommen zurück! Du steuerst wieder selbst.', 'uebersicht');
     }
+    if ($a === 'berater_frage') {
+        // Ohne JavaScript: Frage stellen und Seite neu laden (mit JavaScript läuft das über ?api=berater)
+        $r = berater_fragen($sid, (string)($_POST['frage'] ?? ''));
+        if (isset($r['fehler'])) {
+            meldung($r['fehler'], 'fehler');
+        }
+        weiter('berater');
+    }
+    if ($a === 'berater_loeschen') {
+        berater_loeschen($sid);
+        meldung('Verlauf gelöscht.');
+        weiter('berater');
+    }
     if ($a === 'brief') {
         $an = (int)($_POST['an'] ?? 0);
         $f = brief_senden($sid, $an, (string)($_POST['betreff'] ?? ''), (string)($_POST['text'] ?? ''));
@@ -279,6 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return zeitung_ki(true);
             })(),
             'admin_chat_loeschen' => chat_loeschen((int)($_POST['chat'] ?? 0)),
+            'admin_ki' => ki_einstellungen_speichern($_POST),
             default => 'Unbekannte Admin-Aktion.',
         };
         $ok = [
@@ -289,6 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'admin_passwort' => 'Neues Passwort erzeugt.', 'admin_ereignis' => 'Das Ereignis hat begonnen.', 'admin_ereignis_loeschen' => 'Ereignis gestrichen.',
             'admin_ereignisse_schalter' => ($_POST['aus'] ?? '') === '1' ? 'Zufallsereignisse sind aus.' : 'Zufallsereignisse sind an.',
             'admin_zeitung' => 'Die KI hat die heutige Ausgabe neu geschrieben.', 'admin_chat_loeschen' => 'Chatnachricht entfernt.',
+            'admin_ki' => 'KI-Einstellungen gespeichert.',
         ];
         meldung($f ?? ($ok[$a] ?? 'Erledigt.'), $f ? 'fehler' : 'ok');
         weiter($a === 'admin_chat_loeschen' ? 'chat' : 'admin');
@@ -390,6 +417,7 @@ match ($seite) {
     'nachrichten' => ansicht('nachrichten', $daten),
     'chat' => ansicht('chat', $daten),
     'zeitung' => ansicht('zeitung', $daten),
+    'berater' => berater_bereit() ? ansicht('berater', $daten) : weiter('uebersicht'),
     'vertretung' => ansicht('vertretung', $daten),
     'admin' => ansicht('admin', $daten),
     'rangliste' => ansicht('rangliste', $daten),

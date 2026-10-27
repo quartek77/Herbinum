@@ -93,7 +93,7 @@ async function isoAnsicht(cv) {
   // Ausschnitt: alle Parzellen bis zur jeweils höchsten belegten plus Rand
   const sichtbar = plots.slice(0, Math.max(10, ...teile.map(t => t.slot + 1)));
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
-  const M = /wallhecke|hochsitz/.test(cv.dataset.einheiten || "") || stufen.graben ? 66 : 50;  // Platz für Hecken und Hochsitze
+  const M = /wallhecke|hochsitz/.test(cv.dataset.einheiten || "") || stufen.graben ? 66 : 50;  // Platz für Hecken und Wachtürme
   sichtbar.forEach(p => [[-M, -M], [M, -M], [M, M], [-M, M]].forEach(([dx, dy]) => {
     const u = p.x + dx - ox, v = p.y + dy - oy, X = (u - v) * C, Y = (u + v) * Sn;
     minX = Math.min(minX, X); maxX = Math.max(maxX, X); minY = Math.min(minY, Y); maxY = Math.max(maxY, Y);
@@ -217,7 +217,7 @@ async function isoAnsicht(cv) {
     D.water.forEach(([c, , p]) => linie(p, c === 1 ? 9 : 3.5, css("--waterline")));
     const RW = { 1: 20, 2: 11, 3: 9, 4: 8, 5: 6 };
     D.roads.forEach(([c, , p]) => linie(p, RW[c], css("--asphalt")));
-    // Wassergraben um die Hofanlage, Breite wächst mit der Stufe
+    // Schutzwall um die Hofanlage, Breite wächst mit der Stufe
     if (graben && ring) {
       const r = rechteck(ring, 14);
       ctx.beginPath(); r.forEach(([x, y], i) => i ? ctx.lineTo(...P(x, y)) : ctx.moveTo(...P(x, y))); ctx.closePath();
@@ -243,7 +243,7 @@ async function isoAnsicht(cv) {
     ctx.restore();
     if (!reduceMotion) raf = requestAnimationFrame(draw);
   }
-  // ---- Verteidigung: Graben, Wallhecken und Hochsitze rund um die bebauten Parzellen ----
+  // ---- Verteidigung: Schutzwall, Barrikaden und Wachtürme rund um die bebauten Parzellen ----
   const einheiten = JSON.parse(cv.dataset.einheiten || "{}");
   const graben = stufen.graben || 0;
   const bebaut = teile.map(t => plots[t.slot]);
@@ -277,7 +277,7 @@ async function isoAnsicht(cv) {
     const hecken = Math.min(80, einheiten.wallhecke || 0), sitze = Math.min(12, einheiten.hochsitz || 0);
     const heckenRing = rechteck(ring, 28);
     const lang = 2 * ((ring.x1 - ring.x0) + (ring.y1 - ring.y0) + 112);
-    // jede Wallhecke ist ein Stück von ca. 10 m; bei vielen schließt sich der Ring
+    // jede Barrikade ist ein Stück von ca. 10 m; bei vielen schließt sich der Ring
     const stuecke = Math.min(Math.floor(lang / 10), hecken);
     for (let i = 0; i < stuecke; i++) { const [x, y] = umfang(heckenRing, (i + .5) / Math.max(stuecke, Math.floor(lang / 10))); verteidigung.push({ d: x + y, f: () => heckenstueck(x, y) }); }
     for (let i = 0; i < sitze; i++) { const [x, y] = umfang(rechteck(ring, 36), i / sitze); verteidigung.push({ d: x + y, f: () => hochsitz(x, y) }); }
@@ -313,6 +313,12 @@ function panZoom(svg, vb, onZoom) {
 function zoomKnoepfe(st, pz) { const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<button type="button" aria-label="Hineinzoomen">+</button><button type="button" aria-label="Herauszoomen">−</button>`; z.children[0].onclick = pz.zoomIn; z.children[1].onclick = pz.zoomOut; st.appendChild(z); }
 const AREA_FILL = { residential: "--settle", farmyard: "--settle", commercial: "--industry", industrial: "--industry", retail: "--industry", forest: "--forest", wood: "--forest", water: "--water", wetland: "--water" };
 const AREA_ORDER = ["residential", "farmyard", "commercial", "industrial", "retail", "meadow", "grass", "park", "village_green", "recreation_ground", "allotments", "orchard", "golf_course", "cemetery", "grave_yard", "pitch", "sports_centre", "stadium", "forest", "wood", "wetland", "water"];
+
+// Allianz-Kürzel mit Wappen beim Überfahren, Online-Lampe
+const kuerzelTip = bes => bes && bes.gen ? ` <a class="kuerzel kuerzel-tip" href="?s=allianz&amp;id=${bes.gid}">[${esc(bes.gen)}]<span class="tip" role="tooltip">` +
+  (bes.wappen ? `<img class="wappen tipbild" src="uploads/wappen/${esc(bes.wappen)}" alt="">` : `<span class="wappen tipbild wappen-leer">${esc(bes.gen.slice(0, 3))}</span>`) +
+  `<b>${esc(bes.gname || "")}</b></span></a>` : "";
+const lampe = an => `<i class="lampe ${an ? "an" : "aus"}" title="${an ? "online" : "offline"}"></i>`;
 
 // Passende Aufträge für einen Bereich auf der Karte
 function aktionen(b, bes) {
@@ -393,9 +399,9 @@ async function karte(root) {
       formen.forEach(({ b: x, p }) => p.setAttribute("stroke-width", x.nr === nr ? 4.5 : 2));
       panel.querySelectorAll(".zeile").forEach(z => z.classList.toggle("sel", +z.dataset.nr === nr));
       $("#bereichinfo").innerHTML = `<div class="karte-box"><div class="eyebrow">Bereich ${b.nr} · ${esc(b.typ)} · ${String(b.ha).replace(".", ",")} ha</div><h2>${esc(b.name)}</h2>
-        <div>${bes ? `<span class="punkt" style="background:${esc(bes.farbe)}"></span> <b>${esc(bes.name)}</b>${bes.gen ? ` <span class="kuerzel">[${esc(bes.gen)}]</span>` : ""}${bes.eigen ? " (du)" : bes.verbuendet ? " (deine Allianz)" : ""}` : "frei – besiedelbar, sobald es Siedlertrecks gibt"}</div>
+        <div>${bes ? `${lampe(bes.online)}<span class="punkt" style="background:${esc(bes.farbe)}"></span> <b>${esc(bes.name)}</b>${kuerzelTip(bes)}${bes.eigen ? " (du)" : bes.verbuendet ? " (deine Allianz)" : ""}` : "frei – besiedelbar, sobald es Siedlerkonvois gibt"}</div>
         <div class="werte">${[["Bauplätze", (b.felder - 12) / 28 * 100, b.felder], ["Lebensqualität", b.score.lebensqualitaet], ["Wehrkraft", b.score.wehr], ["Einkommen", b.score.einkommen]].map(([n, v, z]) => `<div class="wert"><span>${n}</span><div class="balken"><i style="width:${Math.max(3, v)}%"></i></div><b>${z ?? v}</b></div>`).join("")}</div>
-        <div class="boni">${[["Holz", b.mod.holz], ["Ziegel", b.mod.ziegel], ["Korn", b.mod.korn], ["Strom", b.mod.strom]].map(([n, v]) => `<div><span>${n}</span><b>×${v.toFixed(2).replace(".", ",")}</b></div>`).join("")}</div>
+        <div class="boni">${[["Holz", b.mod.holz], ["Baustoffe", b.mod.ziegel], ["Nahrung", b.mod.korn], ["Strom", b.mod.strom]].map(([n, v]) => `<div><span>${n}</span><b>×${v.toFixed(2).replace(".", ",")}</b></div>`).join("")}</div>
         <div class="aktionen">${aktionen(b, bes)}</div></div>`;
     }
     panel.innerHTML = `<div><button class="link" type="button" id="zurRegion">← Region</button><h1>${esc(D.name)}</h1></div><div id="bereichinfo"></div>
@@ -433,7 +439,7 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
     const kap = typen.reduce((s, t) => s + E[t].ladung * n[t], 0);
     let last = 0; f.querySelectorAll("[data-ladung]").forEach(i => last += Math.max(0, +i.value || 0));
     out.innerHTML = `Strecke ${km.toFixed(1).replace(".", ",")} km · ${fmt(kmh)} km/h<br>Hinfahrt ${dauer(sek)}${einfach ? "" : ` · zurück nach ${dauer(sek * 2)}`}<br>` +
-      `Verbrauch ${fmt(korn)} Korn · Ladung <span class="${last > kap ? "warn" : ""}">${fmt(last)} / ${fmt(kap)}</span>` +
+      `Verbrauch ${fmt(korn)} Nahrung · Ladung <span class="${last > kap ? "warn" : ""}">${fmt(last)} / ${fmt(kap)}</span>` +
       (faktor > 1.001 ? `<br><span class="warn">Unwetter am Start: Die Fahrt dauert ${Math.round((faktor - 1) * 100)} % länger.</span>` : "");
   }
   f.addEventListener("input", rechne); f.addEventListener("change", rechne); rechne();
@@ -556,7 +562,7 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
   const f = document.getElementById("haendler");
   if (!f) return;
   const kurse = JSON.parse(f.dataset.kurse), wert = JSON.parse(f.dataset.wert), rest = +f.dataset.rest;
-  const out = document.getElementById("haendler-vorschau"), namen = { holz: "Holz", ziegel: "Ziegel", korn: "Korn", taler: "Taler" };
+  const out = document.getElementById("haendler-vorschau"), namen = { holz: "Holz", ziegel: "Baustoffe", korn: "Nahrung", taler: "Euro" };
   function rechne() {
     const von = f.von.value, nach = f.nach.value, n = Math.max(0, +f.menge.value || 0);
     if (von === nach) { out.innerHTML = `<span class="warn">Bitte zwei verschiedene Rohstoffe wählen.</span>`; return; }
@@ -594,7 +600,7 @@ document.querySelectorAll(".bunkerform[data-frei]").forEach(f => {
         box.querySelector(".leer")?.remove();
         for (const m of j.nachrichten) {
           if (m.datum !== tag) { tag = m.datum; box.insertAdjacentHTML("beforeend", `<div class="chat-tag">${esc(m.datum)}</div>`); }
-          box.insertAdjacentHTML("beforeend", `<div class="chat-msg${m.ich ? " ich" : ""}" data-id="${m.id}"><span class="chat-name" style="--farbe:${esc(m.farbe)}">${esc(m.name)}</span>` +
+          box.insertAdjacentHTML("beforeend", `<div class="chat-msg${m.ich ? " ich" : ""}" data-id="${m.id}"><span class="chat-name" style="--farbe:${esc(m.farbe)}"><i class="lampe ${m.online ? "an" : "aus"}"></i>${esc(m.name)}</span>` +
             `<span class="chat-text">${esc(m.text)}</span><time>${esc(m.zeit)}</time>${admin ? `<button type="button" class="chat-weg" title="Nachricht entfernen" aria-label="Nachricht entfernen">×</button>` : ""}</div>`);
           seit = Math.max(seit, m.id);
         }
@@ -632,4 +638,47 @@ document.querySelectorAll(".bunkerform[data-frei]").forEach(f => {
     .then(r => r.json())
     .then(j => { if (j.ok) location.reload(); else if (status) status.textContent = "Heute gibt es nur die Kurzausgabe. (" + j.fehler + ")"; })
     .catch(() => { if (status) status.textContent = "Heute gibt es nur die Kurzausgabe."; });
+})();
+
+// ---------- KI-Berater ----------
+(() => {
+  const form = document.getElementById("berater-form");
+  if (!form) return;
+  const verlauf = document.getElementById("berater-verlauf"), feld = document.getElementById("berater-frage"), rest = document.getElementById("berater-rest");
+  const knopf = form.querySelector("button");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const blase = (klasse, html) => { const d = document.createElement("div"); d.className = "berater-msg " + klasse; d.innerHTML = html; verlauf.appendChild(d); verlauf.scrollTop = verlauf.scrollHeight; return d; };
+  verlauf.scrollTop = verlauf.scrollHeight;
+  document.querySelectorAll(".beispiel").forEach(b => b.addEventListener("click", () => { feld.value = b.dataset.frage; feld.focus(); }));
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const frage = feld.value.trim();
+    if (!frage) return;
+    blase("frage", `<p>${esc(frage)}</p>`);
+    const warte = blase("antwort denkt", "<p>Ich schaue mir deine Daten an …</p>");
+    feld.value = ""; feld.disabled = knopf.disabled = true;
+    try {
+      const r = await fetch("?api=berater", { method: "POST", body: new URLSearchParams({ csrf: document.body.dataset.csrf, frage }), credentials: "same-origin" });
+      const j = await r.json();
+      warte.classList.remove("denkt");
+      if (j.fehler) { warte.classList.add("fehler"); warte.innerHTML = `<p>${esc(j.fehler)}</p>`; }
+      else warte.innerHTML = j.html;
+      if (typeof j.rest === "number") { rest.firstChild.textContent = rest.firstChild.textContent.replace(/^\d+/, j.rest); if (!j.rest) { feld.disabled = knopf.disabled = true; return; } }
+    } catch (err) {
+      warte.classList.remove("denkt"); warte.classList.add("fehler"); warte.innerHTML = "<p>Keine Verbindung. Bitte noch einmal versuchen.</p>";
+    }
+    feld.disabled = knopf.disabled = false; feld.focus(); verlauf.scrollTop = verlauf.scrollHeight;
+  });
+})();
+
+// ---------- Wappen-Vorschau am Allianz-Kürzel: am Fenster ausrichten, damit Tabellen sie nicht abschneiden ----------
+(() => {
+  const zeigen = a => {
+    const tip = a.querySelector(".tip");
+    if (!tip) return;
+    const r = a.getBoundingClientRect(), oben = r.top > 170;
+    Object.assign(tip.style, { position: "fixed", left: r.left + r.width / 2 + "px", top: (oben ? r.top - 8 : r.bottom + 8) + "px", bottom: "auto",
+      transform: oben ? "translate(-50%, -100%)" : "translate(-50%, 0)" });
+  };
+  ["mouseover", "focusin"].forEach(ev => document.addEventListener(ev, e => { const a = e.target.closest && e.target.closest(".kuerzel-tip"); if (a) zeigen(a); }));
 })();

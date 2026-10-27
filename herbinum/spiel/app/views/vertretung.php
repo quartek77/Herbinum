@@ -73,7 +73,7 @@ $andere = vertretbare($sid);
       <?php else: ?>
         <?php foreach ($andere as $x): ?>
           <div class="aktionen vertreten-zeile">
-            <span><span class="spielername"><i style="background:<?= h($x['spieler']['farbe']) ?>"></i><?= h($x['spieler']['name']) ?></span>
+            <span><?= spieler_html($x['spieler']) ?>
               <span class="leise">bis <?= date('H:i', $x['bis']) ?> Uhr</span></span>
             <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="vertreten_start"><input type="hidden" name="spieler" value="<?= (int)$x['spieler']['id'] ?>"><button class="knopf" type="submit">Vertreten</button></form>
           </div>

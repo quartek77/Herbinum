@@ -296,4 +296,28 @@ CREATE TABLE IF NOT EXISTS chronik (
   ort     VARCHAR(64)  NOT NULL DEFAULT '',
   text    VARCHAR(255) NOT NULL DEFAULT '',
   KEY ix_chronik_ts (ts)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Version 7 (Schema 6): KI-Berater, KI-Kostenprotokoll ----------
+
+CREATE TABLE IF NOT EXISTS ki_chat (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  spieler_id  INT UNSIGNED NOT NULL,
+  rolle       VARCHAR(10)  NOT NULL,        -- 'user' oder 'assistant'
+  text        TEXT         NOT NULL,
+  ts          INT UNSIGNED NOT NULL,
+  KEY ix_ki_chat (spieler_id, id),
+  CONSTRAINT fk_ki_chat_spieler FOREIGN KEY (spieler_id) REFERENCES spieler(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ki_log (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ts          INT UNSIGNED NOT NULL,
+  zweck       VARCHAR(10)  NOT NULL,        -- 'zeitung' oder 'berater'
+  spieler_id  INT UNSIGNED NULL,
+  modell      VARCHAR(40)  NOT NULL,
+  ein         INT UNSIGNED NOT NULL,        -- Eingabe-Token (inkl. Cache-Schreiben)
+  aus         INT UNSIGNED NOT NULL,        -- Ausgabe-Token
+  cache       INT UNSIGNED NOT NULL,        -- aus dem Cache gelesene Token
+  KEY ix_ki_log_ts (ts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

@@ -69,7 +69,7 @@ $wann = fn(int $ts) => $ts ? date('d.m.y H:i', $ts) : '–';
       <label for="m-datei">Neuer Loop (<?= implode(', ', MUSIK_FORMATE) ?>, höchstens <?= groesse($grenze) ?>)</label>
       <input id="m-datei" name="datei" type="file" accept=".mp3,.ogg,.m4a,.wav,audio/*" required>
       <label for="m-titel">Titel (optional)</label>
-      <input id="m-titel" name="titel" maxlength="120" placeholder="z. B. Münsterländer Abendstimmung">
+      <input id="m-titel" name="titel" maxlength="120" placeholder="z. B. Night Drive">
       <button class="knopf" type="submit">Hochladen</button>
       <p class="leise">Der erste Loop startet automatisch. Für ganz lückenlose Übergänge eignet sich OGG am besten – MP3-Dateien haben oft eine winzige Stille am Anfang.
         <?php if (php_upload_grenze() < musik_max_bytes()): ?>Der Server nimmt derzeit nur <?= groesse(php_upload_grenze()) ?> an (upload_max_filesize / post_max_size in den PHP-Einstellungen im KAS).<?php endif ?></p>
@@ -90,7 +90,7 @@ $wann = fn(int $ts) => $ts ? date('d.m.y H:i', $ts) : '–';
       <?= csrf_feld() ?>
       <input type="hidden" name="a" value="admin_rundschreiben">
       <label for="r-titel">Betreff</label>
-      <input id="r-titel" name="titel" maxlength="160" required placeholder="z. B. Schützenfest am Wochenende: doppelte Produktion">
+      <input id="r-titel" name="titel" maxlength="160" required placeholder="z. B. Sicherheitskräftefest am Wochenende: doppelte Produktion">
       <label for="r-text">Text</label>
       <textarea id="r-text" name="text" rows="5" maxlength="2000" required></textarea>
       <button class="knopf" type="submit">An alle <?= $stat['spieler'] ?> Spieler schicken</button>
@@ -138,16 +138,49 @@ $kiFehler = einstellung('zeitung_ki_fehler', '');
   </section>
 
   <section class="karte-box">
-    <h2>Herbinumer Anzeiger</h2>
+    <h2>KI: News und Berater</h2>
+    <?php $kiStat = ki_statistik(); $budget = (float)ki_einstellung('ki_budget_monat'); ?>
     <?php if (ki_konfiguriert()): ?>
-      <p><span class="chip ok">KI an</span> Modell <code><?= h((string)(config()['ki']['modell'] ?? KI_MODELL_STANDARD)) ?></code>. Die Redaktion schreibt beim ersten Aufruf der Zeitung an jedem Spieltag.</p>
-      <?php if ($kiFehler !== ''): ?><p class="meldung fehler">Letzter Fehler: <?= h($kiFehler) ?></p><?php endif ?>
-      <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="admin_zeitung"><button class="knopf leicht" type="submit">Heutige Ausgabe neu schreiben lassen</button></form>
-      <p class="leise">Dauert bis zu einer Minute.</p>
+      <p><span class="chip ok">API-Schlüssel vorhanden</span> <?= ki_budget_erreicht() ? '<span class="chip gefahr">Monatsbudget erreicht – KI pausiert</span>' : '' ?></p>
     <?php else: ?>
-      <p><span class="chip">Vorlage</span> Die Zeitung erscheint ohne KI als Kurzausgabe.</p>
-      <p class="leise">Für die KI-Zeitung in config.php einen Schlüssel eintragen: <code>'ki' => ['api_key' => 'sk-ant-…', 'modell' => 'claude-sonnet-5-5']</code>.
-        Den Schlüssel gibt es unter console.anthropic.com. <?= function_exists('curl_init') ? '' : 'Achtung: PHP hat hier kein curl – das braucht die KI.' ?></p>
+      <p><span class="chip">kein Schlüssel</span> Ohne Schlüssel erscheinen die News als Kurzmeldungen, und den Berater gibt es nicht.</p>
+      <p class="leise">Schlüssel in config.php eintragen: <code>'ki' => ['api_key' => 'sk-ant-…']</code> (unter console.anthropic.com → API Keys).
+        <?= function_exists('curl_init') ? '' : 'Achtung: PHP hat hier kein curl – das braucht die KI.' ?></p>
+    <?php endif ?>
+    <div class="kennzahlen">
+      <div><b><?= number_format($kiStat['kosten'], 2, ',', '.') ?> $</b><span>Kosten diesen Monat<?= $budget > 0 ? ' von ' . number_format($budget, 2, ',', '.') . ' $' : '' ?></span></div>
+      <div><b><?= $kiStat['zeitung'] ?></b><span>News-Ausgaben (<?= number_format($kiStat['kosten_zeitung'], 2, ',', '.') ?> $)</span></div>
+      <div><b><?= $kiStat['berater'] ?></b><span>Berater-Fragen (<?= number_format($kiStat['kosten_berater'], 2, ',', '.') ?> $)</span></div>
+    </div>
+    <form method="post" class="formular">
+      <?= csrf_feld() ?>
+      <input type="hidden" name="a" value="admin_ki">
+      <div class="ki-einstellungen">
+        <fieldset><legend>Herbinum News</legend>
+          <label class="haken"><input type="checkbox" name="ki_zeitung_an" value="1"<?= ki_einstellung('ki_zeitung_an') === '1' ? ' checked' : '' ?>> Von der KI schreiben lassen</label>
+          <label for="k-zm">Modell</label>
+          <select id="k-zm" name="ki_zeitung_modell"><?php foreach (KI_MODELLE as $m => $x): ?><option value="<?= $m ?>"<?= ki_modell('zeitung') === $m ? ' selected' : '' ?>><?= h($x['name']) ?></option><?php endforeach ?></select>
+          <label for="k-ton">Schreibstil</label>
+          <select id="k-ton" name="ki_zeitung_ton"><?php foreach (KI_TOENE as $t => $x): ?><option value="<?= $t ?>"<?= ki_einstellung('ki_zeitung_ton') === $t ? ' selected' : '' ?>><?= h(ucfirst($x)) ?></option><?php endforeach ?></select>
+        </fieldset>
+        <fieldset><legend>KI-Berater für Spieler</legend>
+          <label class="haken"><input type="checkbox" name="ki_berater_an" value="1"<?= ki_einstellung('ki_berater_an') === '1' ? ' checked' : '' ?>> Berater anbieten</label>
+          <label for="k-bm">Modell</label>
+          <select id="k-bm" name="ki_berater_modell"><?php foreach (KI_MODELLE as $m => $x): ?><option value="<?= $m ?>"<?= ki_modell('berater') === $m ? ' selected' : '' ?>><?= h($x['name']) ?></option><?php endforeach ?></select>
+          <label for="k-lim">Fragen pro Spieler und Tag</label>
+          <input id="k-lim" name="ki_berater_limit" type="number" min="0" max="200" value="<?= (int)ki_einstellung('ki_berater_limit') ?>">
+        </fieldset>
+        <fieldset><legend>Kosten im Griff</legend>
+          <label for="k-bud">Monatsbudget in US-Dollar (0 = ohne Grenze)</label>
+          <input id="k-bud" name="ki_budget_monat" type="number" min="0" max="1000" step="0.5" value="<?= h(ki_einstellung('ki_budget_monat')) ?>">
+          <p class="leise">Ist das Budget erreicht, pausieren News und Berater bis zum Monatsersten. Richtwerte mit Haiku: eine News-Ausgabe etwa 0,1 Cent, eine Berater-Frage etwa 0,2 Cent.</p>
+        </fieldset>
+      </div>
+      <button class="knopf" type="submit">Einstellungen speichern</button>
+    </form>
+    <?php if (ki_konfiguriert()): ?>
+      <?php if ($kiFehler !== ''): ?><p class="meldung fehler">Letzter News-Fehler: <?= h($kiFehler) ?></p><?php endif ?>
+      <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="admin_zeitung"><button class="knopf leicht" type="submit">Heutige News neu schreiben lassen</button></form>
     <?php endif ?>
   </section>
 </div>
@@ -161,7 +194,7 @@ $kiFehler = einstellung('zeitung_ki_fehler', '');
         $selbst = (int)$s['id'] === (int)$spieler['id']; ?>
       <tr class="<?= (int)$s['gesperrt'] ? 'gesperrt-zeile' : '' ?>">
         <td>
-          <span class="spielername"><i style="background:<?= h($s['farbe']) ?>"></i><?= h($s['name']) ?></span>
+          <?= spieler_html($s) ?>
           <?= (int)$s['ist_admin'] ? '<span class="chip">Admin</span>' : '' ?>
           <?= (int)$s['gesperrt'] ? '<span class="chip gefahr">gesperrt</span>' : '' ?>
           <?php if ((int)$s['gesperrt'] && $s['sperrgrund'] !== ''): ?><div class="leise"><?= h($s['sperrgrund']) ?></div><?php endif ?>

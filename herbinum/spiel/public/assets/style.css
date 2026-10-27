@@ -342,34 +342,34 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 .chat-eingabe { display: flex; gap: 8px; }
 .chat-eingabe input { flex: 1; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-width: 0; }
 
-/* ---------- Zeitung ---------- */
-.zeitung { background: #fbf8ef; color: #1d1b16; border: 1px solid #d8d0bb; border-radius: 6px; padding: 22px 28px 28px; box-shadow: var(--schatten); max-width: 1080px;
-  background-image: linear-gradient(rgba(120, 100, 60, .04) 1px, transparent 1px); background-size: 100% 28px; }
-.zeitung-kopf { border-bottom: 3px double #1d1b16; padding-bottom: 8px; margin-bottom: 14px; text-align: center; }
-.zeitung-name { font: 700 clamp(34px, 6vw, 64px)/1 "Zilla Slab", Georgia, serif; letter-spacing: -.01em; margin: 8px 0; }
-.zeitung-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font: 600 11px/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; border-top: 1px solid #1d1b16; border-bottom: 1px solid #1d1b16; padding: 4px 0; }
-.zeitung-kopf .zeitung-meta + .zeitung-name + .zeitung-meta { border-bottom: 0; }
-.schlagzeile { font: 700 clamp(24px, 3.4vw, 38px)/1.1 "Zilla Slab", Georgia, serif; text-align: center; margin: 4px 0 18px; }
-.zeitung-hinweis { text-align: center; }
-.zeitung-spalten { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 26px; }
-.artikel-spalte { columns: 2 280px; column-gap: 26px; column-rule: 1px solid #d8d0bb; }
-.artikel { break-inside: avoid-column; margin-bottom: 18px; }
-.artikel h2 { font: 700 19px/1.2 "Zilla Slab", Georgia, serif; margin-bottom: 6px; display: block; }
-.artikel p { margin: 0 0 8px; font: 16px/1.55 Georgia, "Times New Roman", serif; text-align: justify; hyphens: auto; }
-.wetter-kasten { border: 2px solid #1d1b16; padding: 12px 14px; align-self: start; background: #fffdf6; }
-.wetter-kasten h2 { font: 700 18px/1 "Zilla Slab", Georgia, serif; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #1d1b16; padding-bottom: 6px; display: block; }
-.wetter-kasten h3 { margin-top: 12px; font: 700 13px/1 var(--body); text-transform: uppercase; letter-spacing: .1em; }
+/* ---------- News ---------- */
+.zeitung { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 0 0 24px; box-shadow: var(--schatten); max-width: 1080px; overflow: hidden; }
+.zeitung-kopf { background: linear-gradient(120deg, #15241f, #23382f 55%, #2d6a5a); color: #fff; padding: 18px 24px 14px; margin-bottom: 18px; }
+.zeitung-name { font: 800 clamp(26px, 4vw, 38px)/1 var(--body); letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+.zeitung-name b { color: #f3d38a; }
+.live-punkt { width: 12px; height: 12px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, .25); }
+.zeitung-meta { display: flex; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; font: 600 12px/1.2 var(--body); color: rgba(255,255,255,.75); }
+.zeitung-meta span + span::before { content: "·"; margin-right: 16px; color: rgba(255,255,255,.4); }
+.schlagzeile { font: 800 clamp(24px, 3.2vw, 34px)/1.15 var(--body); letter-spacing: -.01em; margin: 0 24px 18px; }
+.zeitung-hinweis { margin: 0 24px 12px; }
+.zeitung-spalten { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 24px; padding: 0 24px; }
+.artikel-spalte { display: grid; gap: 14px; align-content: start; }
+.artikel { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; }
+.artikel h2 { font: 700 18px/1.25 var(--body); margin-bottom: 6px; display: block; }
+.artikel p { margin: 0 0 8px; font-size: 15.5px; line-height: 1.6; }
+.wetter-kasten { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; align-self: start; }
+.wetter-kasten h2 { font: 700 13px/1 var(--body); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); display: block; }
+.wetter-kasten h3 { margin-top: 14px; font: 700 12px/1 var(--body); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); }
 .wetter-heute { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
-.wetter-heute b { font: 700 34px/1 "Zilla Slab", Georgia, serif; }
+.wetter-heute b { font: 800 34px/1 var(--body); }
 .vorhersage { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
-.vorhersage li { border-top: 1px dotted #8a8170; padding-top: 6px; }
-.vh-tag span { color: #5b5547; font-size: 14px; }
-.risiko { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; font-size: 14px; margin-top: 3px; }
-.risiko small { flex-basis: 100%; color: #5b5547; padding-left: 22px; }
-.risiko-hoch b { color: #a3200f; }
-.risiko-mittel b { color: #a25a00; }
-.risiko-niedrig b { color: #5b5547; }
-.zeitung .leise { color: #5b5547; }
+.vorhersage li { border-top: 1px solid var(--line); padding-top: 8px; }
+.vh-tag span { color: var(--ink-soft); font-size: 14px; }
+.risiko { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; font-size: 14px; margin-top: 4px; }
+.risiko small { flex-basis: 100%; color: var(--ink-soft); padding-left: 22px; }
+.risiko-hoch b { color: var(--bad); }
+.risiko-mittel b { color: var(--warn); }
+.risiko-niedrig b { color: var(--ink-soft); }
 
 /* ---------- Vertretung ---------- */
 .tage { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -396,10 +396,9 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
   .navtitel { display: none; }
   .hauptnav a { padding: 8px 10px; white-space: nowrap; }
   .hauptnav a[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--leiste-aktiv); }
-  .raster-uebersicht, .raster-gebaeude, .kartenansicht, .start, .raster-admin, .raster-gen, .zeitung-spalten, .chat-raster.mit-liste { grid-template-columns: 1fr; }
+  .raster-uebersicht, .raster-gebaeude, .kartenansicht, .start, .raster-admin, .raster-gen, .zeitung-spalten, .berater-raster, .chat-raster.mit-liste { grid-template-columns: 1fr; }
   .buehne { height: 56vh; }
   .karte-flaeche { min-height: 60vh; }
-  .zeitung { padding: 16px; }
 }
 @media (max-width: 640px) {
   .hauptnav a span:first-of-type { display: none; }
@@ -414,3 +413,65 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
   .gebaeude, .knopf, .buehne canvas { transition: none; }
   .gebaeude:hover { transform: none; }
 }
+
+/* ---------- Version 7: Planungshilfe, Online-Lampe, Wappen-Vorschau, KI-Berater ---------- */
+.bedarf { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13.5px; }
+.bedarf summary { padding: 7px 10px; cursor: pointer; color: var(--ink); font-weight: 600; display: flex; gap: 8px; align-items: center; list-style: none; }
+.bedarf summary::-webkit-details-marker { display: none; }
+.bedarf summary::after { content: "▾"; margin-left: auto; color: var(--ink-soft); }
+.bedarf[open] summary::after { content: "▴"; }
+.bedarf-status { font: 700 11px/1 var(--body); padding: 4px 7px; border-radius: 999px; }
+.bedarf-status.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.bedarf-status.fehlt { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.bedarf-titel { margin: 4px 10px 2px; font: 700 11px/1.2 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.bedarf-liste { margin: 0 10px 6px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.bedarf-liste li { display: grid; grid-template-columns: 18px 1fr; gap: 0 6px; align-items: start; }
+.bedarf-liste li::before { font-weight: 700; text-align: center; }
+.bedarf-liste li.ok::before { content: "✓"; color: var(--ok); }
+.bedarf-liste li.fehlt::before { content: "○"; color: var(--warn); }
+.bedarf-liste li.info::before { content: "i"; color: var(--accent); font-style: italic; font-family: Georgia, serif; }
+.bedarf-kosten { grid-column: 2; font: 500 12px/1.4 var(--mono); color: var(--ink-soft); }
+.bedarf-summe { margin: 6px 10px 10px; padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px dashed var(--line); }
+.bedarf .leise { margin: 0 10px 10px; }
+
+.lampe { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; flex: none; background: #a3a3a3; }
+.lampe.an { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .22); }
+.lampe.kuerzlich { background: #eab308; }
+.spielername .farbpunkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.chat-name .lampe { margin-right: 5px; }
+.online-anzeige { margin-top: auto; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 13px; color: var(--leiste-soft); }
+.online-anzeige b { color: var(--leiste-ink); }
+.online-anzeige ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; color: var(--leiste-ink); }
+
+.kuerzel-tip { position: relative; text-decoration: none; }
+.kuerzel-tip .tip { display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 30; width: max-content; max-width: 220px;
+  flex-direction: column; align-items: center; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.18); font: 600 13px/1.3 var(--body); text-align: center; }
+.kuerzel-tip:hover .tip, .kuerzel-tip:focus .tip { display: flex; }
+.wappen.tipbild { width: 96px; height: 96px; }
+.wappen.riesig { width: 120px; height: 120px; border-radius: 16px; box-shadow: var(--schatten); }
+.wappen.riesig.wappen-leer { font-size: 30px; }
+
+.berater-raster { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.berater-verlauf { min-height: 300px; max-height: 64vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--panel); border-radius: 12px; border: 1px solid var(--line-soft); }
+.berater-msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; line-height: 1.5; }
+.berater-msg p { margin: 0 0 6px; }
+.berater-msg p:last-child, .berater-msg ul:last-child, .berater-msg ol:last-child { margin-bottom: 0; }
+.berater-msg ul, .berater-msg ol { margin: 4px 0 6px; padding-left: 20px; }
+.berater-msg.frage { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-radius: 14px 14px 4px 14px; }
+.berater-msg.antwort { align-self: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; }
+.berater-msg.denkt { color: var(--ink-soft); font-style: italic; }
+.berater-msg.fehler { border-color: var(--bad); color: var(--bad); }
+.beispiele { display: flex; flex-wrap: wrap; gap: 6px; }
+.beispiel { font: 600 13px/1.3 var(--body); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--accent); cursor: pointer; text-align: left; }
+.beispiel:hover { background: var(--accent-hell); }
+.anleitung summary { font-size: 15px; }
+.anleitung ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.kosten-zeile { font: 500 13px/1.4 var(--mono); }
+.online-anzeige summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+.online-anzeige summary::-webkit-details-marker { display: none; }
+.online-anzeige .spielername { font-weight: 600; font-size: 13px; }
+.ki-einstellungen { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 20px; }
+.ki-einstellungen fieldset { margin: 0; display: grid; gap: 6px; }
+@media (max-width: 960px) { .online-anzeige { display: none; } }
+@media (max-width: 960px) { .berater-raster { grid-template-columns: 1fr; } .berater-msg { max-width: 100%; } }

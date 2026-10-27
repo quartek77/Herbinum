@@ -18,7 +18,7 @@ $hidden = fn(string $a, array $f = []) => csrf_feld() . '<input type="hidden" na
     $beworben = in_array((int)$zeige['id'], array_map('intval', array_column(eigene_bewerbungen($sid), 'genossenschaft_id')), true); ?>
   <div class="kopfzeile"><div>
     <div class="eyebrow">Allianz · gegründet <?= $wann((int)$zeige['erstellt_ts']) ?></div>
-    <div class="gen-kopf"><?= wappen_html($zeige, 'wappen gross') ?><h1><?= h($zeige['name']) ?></h1><span class="kuerzel">[<?= h($zeige['kuerzel']) ?>]</span></div>
+    <div class="gen-kopf"><?= wappen_html($zeige, 'wappen riesig') ?><h1><?= h($zeige['name']) ?></h1><span class="kuerzel">[<?= h($zeige['kuerzel']) ?>]</span></div>
   </div></div>
   <div class="raster-gen">
     <section class="karte-box">
@@ -27,7 +27,7 @@ $hidden = fn(string $a, array $f = []) => csrf_feld() . '<input type="hidden" na
       <h2>Mitglieder (<?= count($mitglieder) ?> von <?= gen_max_mitglieder() ?>)</h2>
       <table class="tabelle mitglieder">
         <?php foreach ($mitglieder as $m): ?>
-          <tr><td><span class="spielername"><i style="background:<?= h($m['farbe']) ?>"></i><?= h($m['name']) ?></span></td>
+          <tr><td><?= spieler_html($m) ?></td>
             <td><?= GEN_RAENGE[$m['gen_rang']] ?? '' ?></td><td class="n"><?= zahl($pkt((int)$m['id'])) ?> P.</td></tr>
         <?php endforeach ?>
       </table>
@@ -61,7 +61,7 @@ $hidden = fn(string $a, array $f = []) => csrf_feld() . '<input type="hidden" na
     $summe = array_sum(array_map(fn($m) => $pkt((int)$m['id']), $mitglieder)); ?>
   <div class="kopfzeile"><div>
     <div class="eyebrow">Deine Allianz · <?= GEN_RAENGE[$gen['rang']] ?? '' ?> seit <?= $wann((int)$gen['seit']) ?></div>
-    <div class="gen-kopf"><?= wappen_html($gen, 'wappen gross') ?><h1><?= h($gen['name']) ?></h1><span class="kuerzel">[<?= h($gen['kuerzel']) ?>]</span></div>
+    <div class="gen-kopf"><?= wappen_html($gen, 'wappen riesig') ?><h1><?= h($gen['name']) ?></h1><span class="kuerzel">[<?= h($gen['kuerzel']) ?>]</span></div>
   </div></div>
   <div class="raster-gen">
     <div class="spalte">
@@ -72,7 +72,7 @@ $hidden = fn(string $a, array $f = []) => csrf_feld() . '<input type="hidden" na
           <tr><th>Name</th><th>Rang</th><th class="n">Punkte</th><th>Dabei seit</th><th>Zuletzt da</th><?php if ($vorstand): ?><th></th><?php endif ?></tr>
           <?php foreach ($mitglieder as $m): $mid = (int)$m['id']; ?>
             <tr>
-              <td><span class="spielername"><i style="background:<?= h($m['farbe']) ?>"></i><?= h($m['name']) ?></span><?= $mid === $sid ? ' <span class="leise">(du)</span>' : '' ?></td>
+              <td><?= spieler_html($m) ?><?= $mid === $sid ? ' <span class="leise">(du)</span>' : '' ?></td>
               <td><?= GEN_RAENGE[$m['gen_rang']] ?? '' ?></td>
               <td class="n"><?= zahl($pkt($mid)) ?></td>
               <td class="n"><?= $wann((int)$m['gen_seit_ts']) ?></td>
@@ -159,7 +159,7 @@ $hidden = fn(string $a, array $f = []) => csrf_feld() . '<input type="hidden" na
         <?php if ($vertretbar): ?>
           <?php foreach ($vertretbar as $x): ?>
             <div class="aktionen vertreten-zeile">
-              <span><span class="spielername"><i style="background:<?= h($x['spieler']['farbe']) ?>"></i><?= h($x['spieler']['name']) ?></span> <span class="leise">bis <?= date('H:i', $x['bis']) ?> Uhr</span></span>
+              <span><?= spieler_html($x['spieler']) ?> <span class="leise">bis <?= date('H:i', $x['bis']) ?> Uhr</span></span>
               <form method="post"><?= $hidden('vertreten_start', ['spieler' => $x['spieler']['id']]) ?><button class="knopf" type="submit">Vertreten</button></form>
             </div>
           <?php endforeach ?>

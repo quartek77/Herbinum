@@ -35,11 +35,11 @@ $gruppen = $halle === 'werkstatt'
         if ($e['beweglich']) {
             $werte[] = zahl(einheit_kmh($typ, $z['fo'])) . ' km/h';
             $werte[] = 'Ladung ' . zahl($e['ladung']);
-            $werte[] = $e['korn_km'] ? str_replace('.', ',', (string)$e['korn_km']) . ' Korn/km' : 'braucht kein Korn';
+            $werte[] = $e['korn_km'] ? str_replace('.', ',', (string)$e['korn_km']) . ' Nahrung/km' : 'braucht keine Nahrung';
         }
         $atk = $e['angriff'] * ($e['beweglich'] ? $aAtk : $vAtk);
         $hp = $e['leben'] * ($e['beweglich'] ? $aHp : $vHp);
-        $werte[] = 'Angriff ' . zahl(round($atk)) . ' · Leben ' . zahl(round($hp)) . ($e['beweglich'] ? '' : ' (mit Graben und Lage)');
+        $werte[] = 'Angriff ' . zahl(round($atk)) . ' · Leben ' . zahl(round($hp)) . ($e['beweglich'] ? '' : ' (mit Schutzwall und Lage)');
         ?>
       <article class="gebaeude<?= $fehlt ? ' gesperrt' : '' ?>">
         <header>
@@ -48,6 +48,7 @@ $gruppen = $halle === 'werkstatt'
         </header>
         <p><?= h($e['kurz']) ?></p>
         <p class="werte-zeile"><?= h(implode(' · ', $werte)) ?></p>
+        <?= bedarf_html('einheit', $typ, $z, (int)$spieler['id'], $e['kosten']) ?>
         <dl class="kosten">
           <?php foreach ($e['kosten'] as $r => $k): ?>
             <div class="<?= $b[$r] < $k ? 'fehlt' : '' ?>"><dt><?= RESSOURCEN[$r] ?></dt><dd><?= zahl($k) ?></dd></div>
@@ -73,7 +74,7 @@ $gruppen = $halle === 'werkstatt'
   <div class="spalte">
     <section class="karte-box">
       <h2>Bauschleife</h2>
-      <p class="leise">Werkstatt und Schützenhalle teilen sich eine Bauschleife (höchstens <?= WERKSTATT_MAX_AUFTRAEGE ?> Aufträge).</p>
+      <p class="leise">Fuhrpark und Sicherheitszentrale teilen sich eine Bauschleife (höchstens <?= WERKSTATT_MAX_AUFTRAEGE ?> Aufträge).</p>
       <?php if (!$z['werkstatt']): ?>
         <p class="leise">Gerade frei.</p>
       <?php else: ?>
@@ -96,15 +97,15 @@ $gruppen = $halle === 'werkstatt'
       <section class="karte-box">
         <h2>Verteidigung dieses Bereichs</h2>
         <table class="tabelle">
-          <tr><td>Wassergraben</td><td class="n">Stufe <?= (int)($z['stufen']['graben'] ?? 0) ?></td></tr>
+          <tr><td>Schutzwall</td><td class="n">Stufe <?= (int)($z['stufen']['graben'] ?? 0) ?></td></tr>
           <tr><td>Wehrkraft der Lage</td><td class="n"><?= (int)$b['wehr'] ?> / 100</td></tr>
           <tr><td>Leben der Verteidiger</td><td class="n">×<?= number_format($vHp, 2, ',', '') ?></td></tr>
-          <tr><td>Angriff (Schießausbildung)</td><td class="n">×<?= number_format($vAtk, 2, ',', '') ?></td></tr>
+          <tr><td>Angriff (Einsatztraining)</td><td class="n">×<?= number_format($vAtk, 2, ',', '') ?></td></tr>
         </table>
         <?php if ($bis = schutz_bis(db(), (int)$spieler['id'])): ?>
           <p class="leise">Du stehst noch bis <?= date('d.m. H:i', $bis) ?> Uhr unter Anfängerschutz: Niemand kann dich überfallen, du kannst aber auch selbst nicht angreifen.</p>
         <?php endif ?>
-        <p class="leise">Bei einem Überfall kämpfen alle Einheiten und Anlagen im Bereich mit. Zerstörte Wallhecken und Hochsitze wachsen zu <?= round(WIEDERAUFBAU_ANTEIL * 100) ?> % nach. Gewinnt der Angreifer, nimmt er bis zur Hälfte der Vorräte mit.</p>
+        <p class="leise">Bei einem Überfall kämpfen alle Einheiten und Anlagen im Bereich mit. Zerstörte Barrikaden und Wachtürme wachsen zu <?= round(WIEDERAUFBAU_ANTEIL * 100) ?> % nach. Gewinnt der Angreifer, nimmt er bis zur Hälfte der Vorräte mit.</p>
       </section>
     <?php endif ?>
     <section class="karte-box">

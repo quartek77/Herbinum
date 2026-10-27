@@ -19,11 +19,11 @@ return [
         'spieltag_stunden' => 24,       // Länge eines Spieltags (Tag/Nacht, Zeitung, Wettervorhersage)
         'ereignis_haeufigkeit' => 1.0,  // Zufallsereignisse: 1 = selten (etwa jeder 4.–5. Tag), 0 = nie, 2 = doppelt so oft
     ],
-    // KI-Zeitung „Herbinumer Anzeiger“ (optional). Ohne Schlüssel erscheint die Zeitung als einfache Vorlage.
-    // Schlüssel unter https://console.anthropic.com anlegen. Eine Ausgabe pro Spieltag kostet wenige Cent.
+    // KI für „Herbinum News“ und den KI-Berater (optional). Ohne Schlüssel erscheinen die News als Kurzmeldungen,
+    // und den Berater gibt es nicht. Schlüssel unter https://console.anthropic.com anlegen.
+    // Modelle, Ein/Aus, Fragen-Limit und Monatsbudget stellst du in der Spielleitung ein (Standard: Claude Haiku).
     'ki' => [
         'api_key' => '',
-        'modell' => 'claude-sonnet-5-5',
     ],
     // Einmaliger Schlüssel für install.php – nach der Installation egal, aber nicht leer lassen.
     'install_key' => 'HIER-EINEN-LANGEN-ZUFALLSWERT-EINTRAGEN',

@@ -44,7 +44,7 @@ function markt_tauschen(string $bid, int $sid, string $von, string $nach, int $m
         }
         $k = markt_konditionen($db, $z, $sid);
         if ($k['stufe'] < 1) {
-            return 'Für den Händler brauchst du in diesem Bereich einen Marktplatz.';
+            return 'Für den Händler brauchst du in diesem Bereich ein Handelszentrum.';
         }
         $wert = (int)ceil($menge * MARKT_WERT[$von]);
         if ($k['genutzt'] + $wert > $k['limit']) {
@@ -96,7 +96,7 @@ function angebot_erstellen(string $bid, int $sid, string $gibt, int $gibtMenge, 
             return 'Das ist nicht dein Bereich.';
         }
         if ((int)($z['stufen']['markt'] ?? 0) < 1) {
-            return 'Angebote kannst du nur aus einem Bereich mit Marktplatz einstellen.';
+            return 'Angebote kannst du nur aus einem Bereich mit Handelszentrum einstellen.';
         }
         if ((int)($z['fo']['handelskunde'] ?? 0) < MARKT_SPIELER_AB) {
             return 'Handel mit anderen Spielern gibt es ab Handelskunde Stufe ' . MARKT_SPIELER_AB . '.';
@@ -173,7 +173,7 @@ function angebot_annehmen(string $bid, int $sid, int $id): ?string
             return 'Das ist nicht dein Bereich.';
         }
         if ((int)($z['stufen']['markt'] ?? 0) < 1) {
-            return 'Zum Handeln brauchst du in diesem Bereich einen Marktplatz.';
+            return 'Zum Handeln brauchst du in diesem Bereich ein Handelszentrum.';
         }
         if ((int)($z['fo']['handelskunde'] ?? 0) < MARKT_SPIELER_AB) {
             return 'Handel mit anderen Spielern gibt es ab Handelskunde Stufe ' . MARKT_SPIELER_AB . '.';
@@ -209,7 +209,7 @@ function angebot_annehmen(string $bid, int $sid, int $id): ?string
 /** Offene Angebote, die $sid sehen darf (eigene, öffentliche und die seiner Allianz). */
 function markt_angebote(int $sid): array
 {
-    $st = db()->prepare('SELECT a.*, s.name, s.farbe, s.genossenschaft_id AS gid, g.kuerzel, o.name AS ort,
+    $st = db()->prepare('SELECT a.*, s.name, s.farbe, s.zuletzt_ts, s.genossenschaft_id AS gid, g.kuerzel, g.name AS gname, g.wappen, o.name AS ort,
                                 (s.genossenschaft_id IS NOT NULL AND s.genossenschaft_id = (SELECT genossenschaft_id FROM spieler WHERE id = ?)) AS verbuendet
                          FROM markt_angebote a JOIN spieler s ON s.id = a.spieler_id LEFT JOIN genossenschaften g ON g.id = s.genossenschaft_id
                          JOIN bereiche b ON b.id = a.bereich_id JOIN orte o ON o.id = b.ort_id

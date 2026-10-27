@@ -9,7 +9,7 @@ $schule = (int)($z['stufen']['dorfschule'] ?? 0);
 ?>
 <div class="kopfzeile">
   <div>
-    <div class="eyebrow"><?= h($ort['name']) ?> · <?= h($b['name']) ?> · Dorfschule <?= $schule ? "Stufe {$schule}" : 'nicht gebaut' ?></div>
+    <div class="eyebrow"><?= h($ort['name']) ?> · <?= h($b['name']) ?> · Forschungszentrum <?= $schule ? "Stufe {$schule}" : 'nicht gebaut' ?></div>
     <h1>Forschung</h1>
   </div>
 </div>
@@ -31,6 +31,7 @@ $schule = (int)($z['stufen']['dorfschule'] ?? 0);
           <span class="stufe"><?= $jetzt ? "Stufe {$jetzt}" : 'nicht erforscht' ?><?= $laeuft ? " · {$stufe} läuft" : '' ?></span>
         </header>
         <p><?= h($f['kurz']) ?></p>
+        <?= bedarf_html('forschung', $typ, $z, (int)$spieler['id'], $kosten) ?>
         <?php if ($typ === 'verwaltung'): ?>
           <p class="wirkung">Jetzt <?= max_bereiche($fo) ?> Bereiche erlaubt, mit Stufe <?= $stufe ?>: <?= max_bereiche([$typ => $stufe] + $fo) ?></p>
         <?php elseif ($f['bonus'] > 0): ?>
@@ -69,7 +70,7 @@ $schule = (int)($z['stufen']['dorfschule'] ?? 0);
     </section>
     <section class="karte-box">
       <h2>So funktioniert's</h2>
-      <p class="leise">Forschung gilt für alle deine Bereiche. Geforscht wird in der Dorfschule des Bereichs, in dem du gerade bist – je höher die Schule, desto schneller. Immer nur eine Forschung gleichzeitig.</p>
+      <p class="leise">Forschung gilt für alle deine Bereiche. Geforscht wird im Forschungszentrum des Bereichs, in dem du gerade bist – je höher dessen Stufe, desto schneller. Immer nur eine Forschung gleichzeitig.</p>
     </section>
   </div>
 </div>

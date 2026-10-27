@@ -43,7 +43,7 @@ $imBau = $z['queue'] ? $z['queue'][0]['typ'] : '';
           </table>
         <?php endif ?>
         <?php if ($z['bunker']): ?><p class="leise">Im <a href="?s=bunker">Bunker</a>: <?= h(implode(', ', array_map(fn($t, $n) => "{$n} × " . EINHEITEN[$t]['name'], array_keys($z['bunker']), $z['bunker']))) ?></p><?php endif ?>
-        <?php if ($z['werkstatt']): ?><p class="leise">In der Werkstatt: <?= h(implode(', ', array_map(fn($w) => ($w['anzahl'] - $w['fertig']) . ' × ' . EINHEITEN[$w['typ']]['name'], $z['werkstatt']))) ?></p><?php endif ?>
+        <?php if ($z['werkstatt']): ?><p class="leise">Im Fuhrpark: <?= h(implode(', ', array_map(fn($w) => ($w['anzahl'] - $w['fertig']) . ' × ' . EINHEITEN[$w['typ']]['name'], $z['werkstatt']))) ?></p><?php endif ?>
         <?php if (bewegliche($z['einheiten'])): ?><a class="knopf leicht" href="?s=zuege">Zug losschicken</a><?php endif ?>
       </section>
     <?php endif ?>
@@ -51,12 +51,12 @@ $imBau = $z['queue'] ? $z['queue'][0]['typ'] : '';
     <section class="karte-box">
       <h2>Werte des Bereichs</h2>
       <div class="werte">
-        <?php foreach ([['Lebensqualität', $r['lebensqualitaet'], 'Einwohnerzahl'], ['Wehrkraft', (int)$b['wehr'], 'Verteidigung bei Überfällen'], ['Einkommen', (int)$b['einkommen'], 'Taler pro Einwohner']] as [$n, $v, $w]): ?>
+        <?php foreach ([['Lebensqualität', $r['lebensqualitaet'], 'Einwohnerzahl'], ['Wehrkraft', (int)$b['wehr'], 'Verteidigung bei Überfällen'], ['Einkommen', (int)$b['einkommen'], 'Euro pro Einwohner']] as [$n, $v, $w]): ?>
           <div class="wert"><span><?= $n ?></span><div class="balken"><i style="width:<?= max(3, $v) ?>%"></i></div><b><?= $v ?></b><small><?= $w ?></small></div>
         <?php endforeach ?>
       </div>
       <div class="boni">
-        <?php foreach (['holz' => 'Holz', 'ziegel' => 'Ziegel', 'korn' => 'Korn', 'strom' => 'Strom'] as $k => $n): ?>
+        <?php foreach (['holz' => 'Holz', 'ziegel' => 'Baustoffe', 'korn' => 'Nahrung', 'strom' => 'Strom'] as $k => $n): ?>
           <div><span><?= $n ?></span><b>×<?= number_format((float)$b["mod_$k"], 2, ',', '') ?></b></div>
         <?php endforeach ?>
       </div>

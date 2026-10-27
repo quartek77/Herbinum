@@ -22,7 +22,7 @@ $eingabe = function (string $typ, int $max) {
 
 <?php if ($stufe < 1): ?>
   <section class="karte-box">
-    <p>In diesem Bereich gibt es noch keinen Bunker. Bau ihn unter <a href="?s=gebaeude#g-bunker">Gebäude</a> (braucht Hofstelle Stufe 3).</p>
+    <p>In diesem Bereich gibt es noch keinen Bunker. Bau ihn unter <a href="?s=gebaeude#g-bunker">Gebäude</a> (braucht Zentrale Stufe 3).</p>
     <p class="leise">Im Bunker sind Einheiten und Fahrzeuge vor Raubzügen und neugierigen Kurieren sicher. Dafür stehen sie nach dem Auslagern erst mit Verzögerung wieder bereit.</p>
   </section>
 <?php else: ?>
@@ -37,7 +37,7 @@ $eingabe = function (string $typ, int $max) {
     <section class="karte-box">
       <h2>Einlagern</h2>
       <?php if (!$draussen): ?>
-        <p class="leise">Hier stehen keine Einheiten, die in den Bunker passen. Wallhecken und Hochsitze bleiben draußen.</p>
+        <p class="leise">Hier stehen keine Einheiten, die in den Bunker passen. Barrikaden und Wachtürme bleiben draußen.</p>
       <?php else: ?>
         <form method="post" class="bunkerform" data-frei="<?= max(0, $plaetze - $belegt) ?>">
           <?= csrf_feld() ?>
@@ -92,7 +92,7 @@ $eingabe = function (string $typ, int $max) {
       <ul class="liste-leise">
         <li><b>Bunker ausbauen:</b> +<?= BUNKER_PLAETZE_JE_STUFE ?> Plätze je Stufe, Auslagern 10 % schneller.</li>
         <li><b>Bunkerbau erforschen:</b> +25 % Plätze und 10 % schnelleres Auslagern je Stufe.</li>
-        <li>Platzbedarf: Kurier und Schütze 1, Reiter 2, Trecker 4, Siedlertreck 6.</li>
+        <li>Platzbedarf: Kurier und Sicherheitskraft 1, Einsatzteam 2, Transporter 4, Siedlerkonvoi 6.</li>
       </ul>
     </section>
   </div>

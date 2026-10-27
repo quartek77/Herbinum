@@ -32,8 +32,8 @@ $spalten = ['gesamt' => 'Gesamt', 'gebaeude' => 'Gebäude', 'forschung' => 'Fors
           <tr class="<?= (int)$s['id'] === (int)$spieler['id'] ? 'ich' : '' ?>">
             <td class="platz"><?= (int)$s['platz'] ?>.</td>
             <td>
-              <span class="spielername"><i style="background:<?= h($s['farbe']) ?>"></i><?= h($s['name']) ?></span>
-              <?php if ($s['kuerzel']): ?><a class="kuerzel" href="?s=allianz&amp;id=<?= (int)$s['gid'] ?>">[<?= h($s['kuerzel']) ?>]</a><?php endif ?>
+              <?= spieler_html($s) ?>
+              <?= $s['kuerzel'] ? kuerzel_html(['id' => $s['gid'], 'kuerzel' => $s['kuerzel'], 'name' => $s['gname'], 'wappen' => $s['wappen']]) : '' ?>
               <?= (int)$s['gesperrt'] ? '<span class="chip gefahr">gesperrt</span>' : '' ?>
             </td>
             <td class="n"><?= (int)$s['bereiche'] ?></td>

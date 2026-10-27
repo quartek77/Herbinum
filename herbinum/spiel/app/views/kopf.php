@@ -9,12 +9,17 @@ $ist = fn(string $k) => $seite === $k ? ' aria-current="page"' : '';
 $marke = fn(int $n, string $label) => $n > 0 ? ' <span class="zahlmarke" aria-label="' . $n . ' ' . $label . '">' . ($n > 99 ? '99+' : $n) . '</span>' : '';
 $icon = fn(string $n) => '<svg class="ic" aria-hidden="true"><use href="#i-' . $n . '"/></svg>';
 $nav = [
-    'Hof' => ['uebersicht' => ['Übersicht', 'hof'], 'gebaeude' => ['Gebäude', 'haus'], 'forschung' => ['Forschung', 'buch'],
-              'werkstatt' => ['Werkstatt', 'trecker'], 'schuetzen' => ['Schützenhalle', 'ziel'], 'bunker' => ['Bunker', 'bunker']],
-    'Land' => ['zuege' => ['Züge', 'weg'], 'karte' => ['Karte', 'karte'], 'markt' => ['Markt', 'waage']],
-    'Dorfleben' => ['zeitung' => ['Zeitung', 'zeitung'], 'chat' => ['Chat', 'sprechblase'], 'nachrichten' => ['Nachrichten', 'brief'],
+    'Basis' => ['uebersicht' => ['Übersicht', 'hof'], 'gebaeude' => ['Gebäude', 'haus'], 'forschung' => ['Forschung', 'buch'],
+              'werkstatt' => ['Fuhrpark', 'trecker'], 'schuetzen' => ['Sicherheitszentrale', 'ziel'], 'bunker' => ['Bunker', 'bunker']],
+    'Region' => ['zuege' => ['Züge', 'weg'], 'karte' => ['Karte', 'karte'], 'markt' => ['Markt', 'waage']],
+    'Community' => ['zeitung' => ['News', 'zeitung'], 'chat' => ['Chat', 'sprechblase'], 'nachrichten' => ['Nachrichten', 'brief'],
                     'allianz' => ['Allianz', 'wappen'], 'rangliste' => ['Rangliste', 'pokal'], 'vertretung' => ['Vertretung', 'uhr']],
 ];
+if (berater_bereit()) {
+    $nav['Basis']['berater'] = ['KI-Berater', 'funke'];
+}
+// Wer gerade online ist (für die Anzeige unten in der Seitenleiste)
+$online = db()->query('SELECT name, farbe, zuletzt_ts FROM spieler WHERE zuletzt_ts >= ' . (time() - ONLINE_S) . ' ORDER BY name')->fetchAll();
 $vertretungSeiten = ['uebersicht', 'gebaeude', 'forschung', 'werkstatt', 'schuetzen', 'bunker', 'zuege', 'karte', 'markt', 'rangliste', 'zeitung'];
 $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' => 'taler'];
 ?><!doctype html>
@@ -24,7 +29,7 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($titel) ?> · Herbinum</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 </head>
 <body data-jetzt="<?= time() ?>" data-csrf="<?= h(csrf_token()) ?>" class="phase-<?= h($zeit['phase']) ?><?= $vertretung ? ' in-vertretung' : '' ?>">
 <?php require __DIR__ . '/icons.php'; ?>
@@ -49,6 +54,10 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
       <div class="navgruppe"><a href="?s=admin"<?= $ist('admin') ?>><?= $icon('schluessel') ?><span>Spielleitung</span></a></div>
     <?php endif ?>
   </nav>
+  <details class="online-anzeige">
+    <summary><i class="lampe an"></i> <b><?= count($online) ?></b> online</summary>
+    <ul><?php foreach ($online as $o): ?><li><?= spieler_html($o) ?></li><?php endforeach ?></ul>
+  </details>
 </aside>
 
 <div class="hauptbereich">
@@ -74,7 +83,7 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
         <input type="range" id="musik-vol" min="0" max="100" step="5" hidden>
       </span>
     <?php endif ?>
-    <span class="spielername"><i style="background:<?= h($echt['farbe']) ?>"></i><?= h($echt['name']) ?><?php if (!$vertretung && !empty($gen)): ?> <span class="kuerzel">[<?= h($gen['kuerzel']) ?>]</span><?php endif ?></span>
+    <?= spieler_html($echt + ['zuletzt_ts' => time()]) ?><?= !$vertretung && !empty($gen) ? ' ' . kuerzel_html($gen) : '' ?>
     <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="abmelden"><button class="link" type="submit">Abmelden</button></form>
   </div>
 </header>
@@ -119,7 +128,7 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
     <div>
       <span class="res-name">Einwohner</span>
       <b><?= zahl($r['einwohner']) ?></b>
-      <small>essen <?= zahl($r['korn_verbrauch']) ?> Korn/h</small>
+      <small>essen <?= zahl($r['korn_verbrauch']) ?> Nahrung/h</small>
     </div>
   </div>
 </div>

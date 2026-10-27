@@ -58,7 +58,7 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
   <section class="karte-box">
     <h2>Zug losschicken</h2>
     <?php if (!$mobil): ?>
-      <p class="leise">In diesem Bereich stehen keine Einheiten, die losfahren können. Baue sie in der <a href="?s=werkstatt">Werkstatt</a> oder der <a href="?s=schuetzen">Schützenhalle</a>.</p>
+      <p class="leise">In diesem Bereich stehen keine Einheiten, die losfahren können. Baue sie in der <a href="?s=werkstatt">Fuhrpark</a> oder der <a href="?s=schuetzen">Sicherheitszentrale</a>.</p>
     <?php else: ?>
       <form method="post" class="zugformular" id="zugform"
             data-start="<?= h(json_encode([(int)$b['x'], (int)$b['y']])) ?>" data-koord="<?= h(json_encode($koord)) ?>"
@@ -172,7 +172,7 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
     <?php endif ?>
     <section class="karte-box">
       <h2>Bereiche</h2>
-      <p class="leise">Du hast <?= anzahl_bereiche(db(), $sid) ?> von <?= max_bereiche($z['fo']) ?> erlaubten Bereichen (inklusive Siedlertrecks unterwegs). Mehr erlaubt die Forschung <a href="?s=forschung">Verwaltung</a>.</p>
+      <p class="leise">Du hast <?= anzahl_bereiche(db(), $sid) ?> von <?= max_bereiche($z['fo']) ?> erlaubten Bereichen (inklusive Siedlerkonvois unterwegs). Mehr erlaubt die Forschung <a href="?s=forschung">Verwaltung</a>.</p>
     </section>
   </div>
 </div>

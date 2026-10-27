@@ -3,6 +3,8 @@
 config.php
 # Upload-Pakete enthalten Konfigurationen und alte Beispieldateien mit Zugangsdaten
 herbinum/upload/*.zip
+# Entpackte Upload-Pakete (nur zum Hochladen gedacht)
+herbinum/upload/*/
 dev-testkonto.txt
 .env
 # Datenbank-Sicherungen (das Tabellenschema gehört dagegen ins Repository)

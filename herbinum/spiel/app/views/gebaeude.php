@@ -16,7 +16,7 @@ $wirkung = function (string $typ, int $stufe) use ($geplant, $b, $z): array {
     $vorher = produktion($b, $geplant, tempo(), $z['fo']);
     $nachher = produktion($b, [$typ => $stufe] + $geplant, tempo(), $z['fo']);
     $out = [];
-    foreach (['holz' => 'Holz/h', 'ziegel' => 'Ziegel/h', 'korn_brutto' => 'Korn/h', 'taler' => 'Taler/h', 'strom_prod' => 'Strom', 'einwohner' => 'Einwohner', 'lager' => 'Lager', 'lebensqualitaet' => 'Lebensqualität'] as $k => $n) {
+    foreach (['holz' => 'Holz/h', 'ziegel' => 'Baustoffe/h', 'korn_brutto' => 'Nahrung/h', 'taler' => 'Euro/h', 'strom_prod' => 'Strom', 'einwohner' => 'Einwohner', 'lager' => 'Lager', 'lebensqualitaet' => 'Lebensqualität'] as $k => $n) {
         $d = $nachher[$k] - $vorher[$k];
         if (abs($d) >= 1) {
             $out[] = ($d > 0 ? '+' : '−') . zahl(abs($d)) . ' ' . $n;
@@ -56,6 +56,7 @@ $wirkung = function (string $typ, int $stufe) use ($geplant, $b, $z): array {
           <span class="stufe"><?= $jetzt ? "Stufe {$jetzt}" : 'nicht gebaut' ?><?= $stufe - 1 > $jetzt ? ' · ' . ($stufe - 1) . ' im Bau' : '' ?></span>
         </header>
         <p><?= h($g['kurz']) ?></p>
+        <?php if ($g['braucht']) echo bedarf_html('gebaeude', $typ, $z, (int)$spieler['id'], $kosten); ?>
         <?php if ($w = $wirkung($typ, $stufe)): ?>
           <p class="wirkung"><?= h(implode(' · ', $w)) ?></p>
         <?php endif ?>
@@ -80,7 +81,7 @@ $wirkung = function (string $typ, int $stufe) use ($geplant, $b, $z): array {
     <?php require __DIR__ . '/warteschlange.php'; ?>
     <section class="karte-box">
       <h2>So funktioniert's</h2>
-      <p class="leise">Die Kosten werden beim Auftrag sofort abgezogen. Bis zu <?= (int)(config()['spiel']['max_warteschlange'] ?? 3) ?> Aufträge laufen nacheinander ab, auch wenn du nicht eingeloggt bist. Holzplatz, Ziegelei und Acker brauchen Strom – ohne genug Windräder laufen sie nur gedrosselt.</p>
+      <p class="leise">Die Kosten werden beim Auftrag sofort abgezogen. Bis zu <?= (int)(config()['spiel']['max_warteschlange'] ?? 3) ?> Aufträge laufen nacheinander ab, auch wenn du nicht eingeloggt bist. Sägewerk, Baustoffwerk und Gewächshaus brauchen Strom – ohne genug Windparks laufen sie nur gedrosselt.</p>
     </section>
   </div>
 </div>

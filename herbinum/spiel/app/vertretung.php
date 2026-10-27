@@ -6,7 +6,7 @@ declare(strict_types=1);
 const VERTRETUNG_RECHTE = [
     'bauen' => 'Gebäude bauen und Bauaufträge abbrechen',
     'forschen' => 'Forschung starten',
-    'werkstatt' => 'Einheiten in Werkstatt und Schützenhalle bauen',
+    'werkstatt' => 'Einheiten in Fuhrpark und Sicherheitszentrale bauen',
     'zuege' => 'Transporte und Verlegungen zwischen seinen eigenen Bereichen, Züge umkehren',
     'bunker' => 'Einheiten im Bunker ein- und auslagern',
     'markt' => 'Beim Händler tauschen',
@@ -140,7 +140,7 @@ function vertretung_ziel(int $vertreter, int $ziel): ?array
     if (!$f || !$v['rechte_liste']) {
         return null;
     }
-    $st = db()->prepare('SELECT id, name, farbe, ist_admin, gesperrt, sperrgrund FROM spieler WHERE id = ? AND gesperrt = 0');
+    $st = db()->prepare('SELECT id, name, farbe, ist_admin, gesperrt, sperrgrund, zuletzt_ts FROM spieler WHERE id = ? AND gesperrt = 0');
     $st->execute([$ziel]);
     $s = $st->fetch();
     if (!$s) {

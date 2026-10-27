@@ -1,5 +1,5 @@
 <?php
-// Forschung, Werkstatt, Züge (Transport, Verlegen, Erkunden, Besiedeln) und deren Ereignisse.
+// Forschung, Fuhrpark, Züge (Transport, Verlegen, Erkunden, Besiedeln) und deren Ereignisse.
 // Wie die Rohstoffe werden auch Ankünfte erst beim nächsten Seitenaufruf verarbeitet – von irgendeinem Spieler.
 declare(strict_types=1);
 
@@ -71,7 +71,7 @@ function forschung_starten(string $bid, int $sid, string $typ): ?string
         $st = $db->prepare('SELECT spieler_id FROM forschungsauftraege WHERE spieler_id = ? FOR UPDATE');
         $st->execute([$sid]);
         if ($st->fetch()) {
-            return 'In deiner Dorfschule wird schon geforscht – immer nur eine Forschung gleichzeitig.';
+            return 'In deinem Forschungszentrum wird schon geforscht – immer nur eine Forschung gleichzeitig.';
         }
         if ($f = fehlende_voraussetzungen(FORSCHUNG[$typ]['braucht'], $z['stufen'], $z['fo'])) {
             return 'Dafür brauchst du in diesem Bereich zuerst: ' . implode(', ', $f) . '.';
@@ -107,7 +107,7 @@ function forschung_abbrechen(int $sid): ?string
 }
 
 // =====================================================================
-// Werkstatt
+// Fuhrpark
 // =====================================================================
 
 const WERKSTATT_MAX_AUFTRAEGE = 5;
@@ -130,7 +130,7 @@ function einheiten_bauen(string $bid, int $sid, string $typ, int $anzahl): ?stri
             return 'Dafür brauchst du zuerst: ' . implode(', ', $f) . '.';
         }
         if (count($z['werkstatt']) >= WERKSTATT_MAX_AUFTRAEGE) {
-            return 'Werkstatt und Schützenhalle haben zusammen schon ' . WERKSTATT_MAX_AUFTRAEGE . ' Aufträge.';
+            return 'Fuhrpark und Sicherheitszentrale haben zusammen schon ' . WERKSTATT_MAX_AUFTRAEGE . ' Aufträge.';
         }
         $kosten = [];
         foreach (RESSOURCEN as $r => $_) {
@@ -221,7 +221,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                 break;
             case 'erkunden':
                 if (empty($einheiten['fahrradkurier'])) {
-                    return 'Zum Erkunden brauchst du mindestens einen Fahrradkurier.';
+                    return 'Zum Erkunden brauchst du mindestens einen E-Bike-Kurier.';
                 }
                 if ($zielBesitzer === $sid) {
                     return 'Deinen eigenen Bereich kennst du schon.';
@@ -235,7 +235,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                     return 'Raubzüge gehen nur gegen besiedelte Bereiche anderer Spieler.';
                 }
                 if (!array_filter($einheiten, fn($n, $t) => EINHEITEN[$t]['angriff'] > 0, ARRAY_FILTER_USE_BOTH)) {
-                    return 'Für einen Raubzug brauchst du Schützen oder Reiter.';
+                    return 'Für einen Raubzug brauchst du Sicherheitskräfte oder Einsatzteams.';
                 }
                 if (array_sum($ladung) > 0) {
                     return 'Auf dem Hinweg wird nichts geladen – Platz für die Beute.';
@@ -252,7 +252,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                 break;
             case 'kolonisieren':
                 if (empty($einheiten['siedlertreck'])) {
-                    return 'Zum Besiedeln brauchst du einen Siedlertreck.';
+                    return 'Zum Besiedeln brauchst du einen Siedlerkonvoi.';
                 }
                 if ($zielBesitzer !== null) {
                     return 'Dieser Bereich ist schon besiedelt.';
@@ -270,7 +270,7 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
         $bedarf = $ladung;
         $bedarf['korn'] += $verbrauch;
         if ($f = kosten_pruefen($b, $bedarf)) {
-            return $f . ($verbrauch ? ' (Die Fahrt kostet ' . zahl($verbrauch) . ' Korn.)' : '');
+            return $f . ($verbrauch ? ' (Die Fahrt kostet ' . zahl($verbrauch) . ' Nahrung.)' : '');
         }
         // Bei Sturm, Hochwasser und Co. am Start dauert die Fahrt länger
         $dauer = (int)round(reisezeit($km, zug_tempo($einheiten, $z['fo']), tempo()) * ereignis_zugfaktor($b, $jetzt));
@@ -427,7 +427,7 @@ function zug_ankunft(PDO $db, array $zug): void
         case 'erkunden':
             nachricht($db, $sid, $ts, 'bericht', "Erkundung: {$zielName}", erkundungsbericht($db, $zug, $ziel));
             if ($besitzer !== null && $besitzer !== $sid) {
-                nachricht($db, $besitzer, $ts, 'warnung', "Ein fremder Fahrradkurier war in {$zielName}", ['text' => 'Jemand hat sich bei dir umgesehen.']);
+                nachricht($db, $besitzer, $ts, 'warnung', "Ein fremder E-Bike-Kurier war in {$zielName}", ['text' => 'Jemand hat sich bei dir umgesehen.']);
                 chronik('erkundung', ort_von_bereich($db, $zug['ziel_id']), '', $ts);
             }
             zug_umkehren($db, $zug, false);
@@ -462,14 +462,14 @@ function zug_ankunft(PDO $db, array $zug): void
             $db->prepare("INSERT INTO gebaeude (bereich_id, typ, stufe) VALUES (?, 'hofstelle', 1) ON DUPLICATE KEY UPDATE stufe = GREATEST(stufe, 1)")
                ->execute([$zug['ziel_id']]);
             $rest = zug_einheiten($zug);
-            $rest['siedlertreck']--;    // der Treck wird zur Hofstelle
+            $rest['siedlertreck']--;    // der Treck wird zur Zentrale
             foreach ($rest as $typ => $n) {
                 if ($n > 0) {
                     einheiten_aendern($db, $zug['ziel_id'], $typ, $n);
                 }
             }
             $db->prepare('DELETE FROM zuege WHERE id = ?')->execute([$zug['id']]);
-            nachricht($db, $sid, $ts, 'kolonie', "{$zielName} besiedelt!", ['text' => 'Deine Siedler haben eine Hofstelle gegründet. Wechsle oben rechts zum neuen Bereich.']);
+            nachricht($db, $sid, $ts, 'kolonie', "{$zielName} besiedelt!", ['text' => 'Deine Siedler haben eine Zentrale gegründet. Wechsle oben rechts zum neuen Bereich.']);
             chronik('besiedlung', ort_von_bereich($db, $zug['ziel_id']), '', $ts);
             return;
     }
@@ -491,7 +491,7 @@ function zug_rueckkehr(PDO $db, array $zug): void
 }
 
 /**
- * Was der Kurier sieht, hängt vom Dorftratsch-Vorsprung ab (plus einem Bonus für mehrere Kuriere):
+ * Was der Kurier sieht, hängt vom Informationsnetz-Vorsprung ab (plus einem Bonus für mehrere Kuriere):
  * immer Vorräte, ab 1 Einheiten, ab 2 Gebäude, ab 3 Forschung.
  */
 function erkundungsbericht(PDO $db, array $zug, array $ziel): array
@@ -544,7 +544,7 @@ function kampfwerte(array $fo, bool $verteidiger, int $graben = 0, int $wehr = 5
     $angriff = 1 + FORSCHUNG['schiessausbildung']['bonus'] * (int)($fo['schiessausbildung'] ?? 0);
     $leben = 1 + FORSCHUNG['schutzausruestung']['bonus'] * (int)($fo['schutzausruestung'] ?? 0);
     if ($verteidiger) {
-        // Graben und die echte Lage (Wehrkraft 0–100 → ×0,75 bis ×1,25) stärken die Verteidiger
+        // Schutzwall und die echte Lage (Wehrkraft 0–100 → ×0,75 bis ×1,25) stärken die Verteidiger
         // nachts hält die Nachtwache zusätzlich die Augen offen
         $leben *= (1 + GRABEN_BONUS * $graben) * (0.75 + $wehr / 200) * ($nacht ? 1 + NACHT_VERTEIDIGUNG : 1);
     }

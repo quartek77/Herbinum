@@ -24,7 +24,7 @@ foreach (MARKT_WERT as $von => $_) {
 ?>
 <div class="kopfzeile">
   <div>
-    <div class="eyebrow"><?= h($ort['name']) ?> · <?= h($b['name']) ?> · Marktplatz <?= $k['stufe'] ? "Stufe {$k['stufe']}" : 'nicht gebaut' ?></div>
+    <div class="eyebrow"><?= h($ort['name']) ?> · <?= h($b['name']) ?> · Handelszentrum <?= $k['stufe'] ? "Stufe {$k['stufe']}" : 'nicht gebaut' ?></div>
     <h1>Markt</h1>
   </div>
 </div>
@@ -34,7 +34,7 @@ foreach (MARKT_WERT as $von => $_) {
     <section class="karte-box">
       <h2><?= $icon('waage') ?> Beim Händler tauschen</h2>
       <?php if ($k['stufe'] < 1): ?>
-        <p>Der Händler kommt erst, wenn in diesem Bereich ein <a href="?s=gebaeude#g-markt">Marktplatz</a> steht (braucht Wohnhäuser Stufe 3).</p>
+        <p>Der Händler kommt erst, wenn in diesem Bereich ein <a href="?s=gebaeude#g-markt">Handelszentrum</a> steht (braucht Wohnviertel Stufe 3).</p>
       <?php else: ?>
         <p class="leise">Der Händler nimmt deine Rohstoffe und gibt dir andere – mit <b><?= round($k['verlust'] * 100) ?> % Verlust</b><?= $k['krise'] > 0 ? ' (davon ' . round($k['krise'] * 100) . ' % Krisenaufschlag)' : '' ?>.
           Heute kannst du noch Waren im Grundwert von <b><?= zahl($rest) ?></b> von <?= zahl($k['limit']) ?> abgeben (gilt für 24 Stunden).</p>
@@ -82,7 +82,7 @@ foreach (MARKT_WERT as $von => $_) {
                 $geb = (int)$a['verbuendet'] ? MARKT_GEBUEHR_ALLIANZ : MARKT_GEBUEHR;
                 $kann = $spielerhandel && $k['stufe'] >= 1 && (float)$b[$a['will_res']] >= (int)$a['will_menge']; ?>
               <tr>
-                <td><span class="spielername"><i style="background:<?= h($a['farbe']) ?>"></i><?= h($a['name']) ?></span><?= $a['kuerzel'] ? ' <span class="kuerzel">[' . h($a['kuerzel']) . ']</span>' : '' ?>
+                <td><?= spieler_html($a) ?> <?= $a['kuerzel'] ? kuerzel_html(['id' => $a['gid'], 'kuerzel' => $a['kuerzel'], 'name' => $a['gname'], 'wappen' => $a['wappen']]) : '' ?>
                   <div class="leise"><?= h($a['ort']) ?><?= (int)$a['nur_allianz'] ? ' · nur Allianz' : '' ?> · noch <?= dauer((int)$a['ablauf_ts'] - time()) ?></div></td>
                 <td><?= $res($a['gibt_res'], (int)$a['gibt_menge']) ?></td>
                 <td><?= $res($a['will_res'], (int)$a['will_menge']) ?></td>
@@ -104,7 +104,7 @@ foreach (MARKT_WERT as $von => $_) {
       <section class="karte-box">
         <h2>Angebot aufhängen</h2>
         <?php if ($k['stufe'] < 1): ?>
-          <p class="leise">Angebote gehen nur aus einem Bereich mit Marktplatz.</p>
+          <p class="leise">Angebote gehen nur aus einem Bereich mit Handelszentrum.</p>
         <?php elseif (count($eigene) >= max_angebote($z['fo'])): ?>
           <p class="leise">Du hast schon <?= count($eigene) ?> Angebote offen (höchstens <?= max_angebote($z['fo']) ?>).</p>
         <?php else: ?>
@@ -121,7 +121,7 @@ foreach (MARKT_WERT as $von => $_) {
             <?php if ($gen): ?><label class="haken"><input type="checkbox" name="nur_allianz" value="1"> nur für meine Allianz [<?= h($gen['kuerzel']) ?>]</label><?php endif ?>
             <button class="knopf" type="submit">Aufhängen</button>
             <p class="leise">Die Ware geht gleich an den Markt und kommt zurück, wenn du das Angebot zurückziehst oder es nach <?= MARKT_ANGEBOT_TAGE ?> Tagen verfällt.
-              Der Gegenwert muss zwischen der Hälfte und dem Doppelten des Grundwerts liegen (Holz 1 · Ziegel 1,5 · Korn 1,2 · Taler 4).</p>
+              Der Gegenwert muss zwischen der Hälfte und dem Doppelten des Grundwerts liegen (Holz 1 · Baustoffe 1,5 · Nahrung 1,2 · Euro 4).</p>
           </form>
         <?php endif ?>
       </section>
@@ -141,7 +141,7 @@ foreach (MARKT_WERT as $von => $_) {
     <section class="karte-box">
       <h2>So wird der Markt besser</h2>
       <ul class="liste-leise">
-        <li><b>Marktplatz ausbauen:</b> je Stufe <?= round(MARKT_VERLUST_JE_STUFE * 100) ?> Punkte weniger Verlust und <?= zahl(MARKT_MENGE_JE_STUFE * tempo()) ?> mehr Tageslimit.</li>
+        <li><b>Handelszentrum ausbauen:</b> je Stufe <?= round(MARKT_VERLUST_JE_STUFE * 100) ?> Punkte weniger Verlust und <?= zahl(MARKT_MENGE_JE_STUFE * tempo()) ?> mehr Tageslimit.</li>
         <li><b>Handelskunde erforschen:</b> je Stufe <?= round(MARKT_VERLUST_JE_FORSCHUNG * 100) ?> Punkte weniger Verlust, +25 % Tageslimit und ein Angebot mehr; ab Stufe <?= MARKT_SPIELER_AB ?> Handel mit Spielern.</li>
         <li>Besser als <?= round(MARKT_VERLUST_MIN * 100) ?> % Verlust wird der Händler nie. Bei einer Wirtschaftskrise verlangt er mehr.</li>
       </ul>
