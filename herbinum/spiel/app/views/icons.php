@@ -1,0 +1,27 @@
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 32 32"><path d="M4 28V14l12-9 12 9v14z" fill="var(--brick)"/><path d="M2 15 16 4l14 11" fill="none" stroke="var(--roof)" stroke-width="3" stroke-linejoin="round"/><path d="M12 28v-7h8v7" fill="var(--plaster)"/><path d="M8 17h4v3H8zM20 17h4v3h-4z" fill="var(--plaster)"/></symbol>
+    <symbol id="i-hof" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7M5 10v10h14V10M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-haus" viewBox="0 0 24 24"><path d="M4 20V9l5-4 5 4v11M14 20v-8h6v8M2 20h20M7 12h4M7 16h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-buch" viewBox="0 0 24 24"><path d="M4 5c3-1 5-1 8 1 3-2 5-2 8-1v14c-3-1-5-1-8 1-3-2-5-2-8-1zM12 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trecker" viewBox="0 0 24 24"><circle cx="7" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 12V6h6l2 6h6v4M11 6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-ziel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-bunker" viewBox="0 0 24 24"><path d="M3 18a9 9 0 0 1 18 0zM2 18h20M9 18v-3h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-weg" viewBox="0 0 24 24"><path d="M5 21c0-6 6-6 6-11S7 5 7 3M15 21c0-4 4-5 4-9s-3-5-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-karte" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-waage" viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M4 8h16M4 8l-2 6a3 3 0 0 0 4 0zM20 8l-2 6a3 3 0 0 0 4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-zeitung" viewBox="0 0 24 24"><path d="M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2zM17 9h3v10a2 2 0 0 1-2 2M7 9h7M7 13h7M7 17h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-sprechblase" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-brief" viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 6l9 7 9-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wappen" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 4 8 8 9 4-1 8-4 8-9V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 3v18M4 11h16" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-pokal" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-uhr" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-schluessel" viewBox="0 0 24 24"><circle cx="8" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 12h9M17 12v3M20 12v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-holz" viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="8" rx="4" fill="#a8743f"/><ellipse cx="19" cy="12" rx="3" ry="4" fill="#e3c08a"/><ellipse cx="19" cy="12" rx="1.3" ry="1.8" fill="none" stroke="#a8743f"/></symbol>
+    <symbol id="i-ziegel" viewBox="0 0 24 24"><path d="M2 7h9v5H2zM13 7h9v5h-9zM7 13h10v5H7zM2 13h4v5H2zM18 13h4v5h-4z" fill="#c0573f"/></symbol>
+    <symbol id="i-korn" viewBox="0 0 24 24"><path d="M12 22V7" stroke="#b8902e" stroke-width="2" fill="none"/><g fill="#e0b84a"><ellipse cx="9.5" cy="9" rx="2" ry="3.2" transform="rotate(-25 9.5 9)"/><ellipse cx="14.5" cy="9" rx="2" ry="3.2" transform="rotate(25 14.5 9)"/><ellipse cx="9.5" cy="14" rx="2" ry="3.2" transform="rotate(-25 9.5 14)"/><ellipse cx="14.5" cy="14" rx="2" ry="3.2" transform="rotate(25 14.5 14)"/><ellipse cx="12" cy="4.5" rx="1.8" ry="3"/></g></symbol>
+    <symbol id="i-taler" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#d9a92b"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#f6dc84" stroke-width="1.5"/><path d="M10 9h4M12 9v6" stroke="#8a6512" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-strom" viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 8-11h-6z" fill="#e8b923"/></symbol>
+    <symbol id="i-leute" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="#6d8fb5"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6z" fill="#6d8fb5"/><circle cx="17" cy="9" r="2.6" fill="#9db6d0"/><path d="M14 20c.3-3 1.5-5 3-5 2.5 0 4.5 1.8 4.5 5z" fill="#9db6d0"/></symbol>
+  </defs>
+</svg>

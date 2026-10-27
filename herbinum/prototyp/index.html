@@ -1,0 +1,772 @@
+<meta charset="utf-8">
+<title>Herbinum</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-screen map app — header strip, map stage left, info panel right (stacks under the map on phones). */
+:root {
+  --ground: #dde4cf;      /* Acker / Feldmark */
+  --settle: #f1efe6;      /* Wohnbebauung */
+  --industry: #d9d3dc;
+  --green: #c8d9b4;
+  --forest: #9fbf8f;
+  --water: #93bfd6;
+  --waterline: #5f9fc2;
+  --bld: #9b8f86;
+  --road: #ffffff;
+  --roadcase: #b9b2a6;
+  --major: #f3d38a;
+  --majorcase: #c9a24c;
+  --motorway: #e79a7a;
+  --rail: #6c6a66;
+  --ink: #23302b;
+  --ink-soft: #5b6862;
+  --panel: #f8f8f4;
+  --line: #d4d8cc;
+  --accent: #1d6380;      /* Wasserschloss-Graben */
+  --accent-ink: #ffffff;
+  --brick: #b4523a;
+  --brick-dark: #8e3d2b;
+  --plaster: #f2ecdf;
+  --beam: #4a3a30;
+  --roof: #9a3a29;
+  --roof-dark: #4b4a4f;
+  --grass: #b7cf98;
+  --grass-edge: #8fae74;
+  --path: #e2cf9e;
+  --field: #d9bf62;
+  --field-row: #b89c3f;
+  --tree: #5e8f4e;
+  --tree-dark: #3f6b37;
+  --asphalt: #a9a8a3;
+  --ramp-lo: #f0e2b6;
+  --ramp-hi: #1d6380;
+  --p1: #c0392b; --p2: #2e7d32; --p3: #7b4fb0; --p4: #d17a00; --p5: #0f7c8c; --p6: #b03a78;
+  --display: "Zilla Slab", "Rockwell", Georgia, serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #1d2621; --settle: #2c322d; --industry: #2f2c35; --green: #243425; --forest: #20372a; --water: #1d3c4d; --waterline: #3f7fa3;
+  --bld: #4f5650; --road: #6d746c; --roadcase: #1a201c; --major: #9c8448; --majorcase: #3b3320; --motorway: #a8634a; --rail: #8a8f88;
+  --ink: #e4ebe5; --ink-soft: #a4b0a9; --panel: #161c19; --line: #2f3a34; --accent: #63b5d6; --accent-ink: #0e1a20;
+  --grass: #3b5233; --grass-edge: #2b3f26; --path: #7d6d4a; --field: #8a7a3a; --field-row: #6b5d28; --tree: #3c6a35; --tree-dark: #284a24;
+  --asphalt: #5c5f5c; --ramp-lo: #3a3426; --ramp-hi: #63b5d6;
+  --p1: #ef6b5b; --p2: #6cc070; --p3: #a98ae0; --p4: #f0a440; --p5: #4cc3d1; --p6: #e477b0;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --ground: #1d2621; --settle: #2c322d; --industry: #2f2c35; --green: #243425; --forest: #20372a; --water: #1d3c4d; --waterline: #3f7fa3;
+  --bld: #4f5650; --road: #6d746c; --roadcase: #1a201c; --major: #9c8448; --majorcase: #3b3320; --motorway: #a8634a; --rail: #8a8f88;
+  --ink: #e4ebe5; --ink-soft: #a4b0a9; --panel: #161c19; --line: #2f3a34; --accent: #63b5d6; --accent-ink: #0e1a20;
+  --grass: #3b5233; --grass-edge: #2b3f26; --path: #7d6d4a; --field: #8a7a3a; --field-row: #6b5d28; --tree: #3c6a35; --tree-dark: #284a24;
+  --asphalt: #5c5f5c; --ramp-lo: #3a3426; --ramp-hi: #63b5d6;
+  --p1: #ef6b5b; --p2: #6cc070; --p3: #a98ae0; --p4: #f0a440; --p5: #4cc3d1; --p6: #e477b0;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--panel); color: var(--ink); font: 15px/1.45 var(--body); }
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+header {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line);
+}
+.brand { font: 700 24px/1 var(--display); letter-spacing: .01em; }
+.brand small { font: 500 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-left: 8px; }
+nav.crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; font-size: 14px; }
+nav.crumbs button { font: inherit; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+nav.crumbs button[aria-current="page"] { color: var(--ink); font-weight: 600; cursor: default; }
+nav.crumbs span { color: var(--ink-soft); }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 370px; min-height: 0; }
+.stage { position: relative; background: var(--ground); min-height: 0; overflow: hidden; }
+.stage svg, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.stage svg { cursor: grab; }
+.stage svg.dragging { cursor: grabbing; }
+.zoom { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: 12px; display: grid; gap: 6px; }
+.zoom button, .tool {
+  font: 600 15px/1 var(--body); min-width: 36px; height: 36px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
+}
+.modes { position: absolute; left: 12px; top: 12px; right: 70px; display: flex; flex-wrap: wrap; gap: 6px; }
+.modes button { font: 600 13px/1 var(--body); padding: 8px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.compass { position: absolute; left: 12px; bottom: 12px; font: 500 12px/1.3 var(--mono); color: var(--ink-soft); background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 6px 8px; border-radius: 6px; }
+aside {
+  border-left: 1px solid var(--line); overflow-y: auto; min-height: 0;
+  padding-block: 18px 28px; padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px;
+}
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 28px; line-height: 1.1; }
+h2 { font-size: 18px; }
+.eyebrow { font: 600 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.lead { color: var(--ink-soft); margin: 6px 0 0; max-width: 60ch; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { border-top: 2px solid var(--ink); padding-top: 6px; }
+.stat b { display: block; font: 500 20px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--ink-soft); }
+.list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.row {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 8px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; text-align: left; font: inherit; cursor: pointer;
+}
+.row:hover, .row.sel { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.row .nr { font: 500 12px/1 var(--mono); color: var(--ink-soft); text-align: right; }
+.row .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sub { display: block; font-weight: 400; font-size: 12px; color: var(--ink-soft); }
+.row .val { font: 500 12px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.occ { display: flex; gap: 2px; margin-top: 4px; }
+.occ i { width: 8px; height: 8px; border-radius: 2px; background: var(--line); }
+.chip { display: inline-block; font: 600 11px/1 var(--body); padding: 3px 6px; border-radius: 4px; border: 1px solid currentColor; letter-spacing: .03em; }
+.bars { display: grid; gap: 8px; }
+.bar { display: grid; grid-template-columns: 120px minmax(0, 1fr) 34px; gap: 8px; align-items: center; font-size: 13px; }
+.bar .track { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); }
+.bar b { font: 500 13px/1 var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+.mods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mod { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.mod span { display: block; font-size: 12px; color: var(--ink-soft); }
+.mod b { font: 500 15px/1.2 var(--mono); }
+.btn { font: 600 14px/1 var(--body); padding: 11px 14px; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; align-self: flex-start; }
+.owner { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.owner i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--ink-soft); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.timeline { display: grid; gap: 8px; }
+.timeline .ctl { display: flex; gap: 10px; align-items: center; }
+.timeline input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.timeline output { font: 500 14px/1 var(--mono); min-width: 64px; text-align: right; }
+table.prod { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.prod td, table.prod th { padding: 5px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+table.prod th { font-weight: 600; color: var(--ink-soft); font-size: 12px; }
+table.prod td.n { text-align: right; font: 500 13px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.note { font-size: 12px; color: var(--ink-soft); }
+.note a { color: var(--accent); }
+button:focus-visible, .row:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg text { font-family: var(--display); paint-order: stroke; stroke: var(--panel); stroke-linejoin: round; fill: var(--ink); }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-soft); font-family: var(--display); font-size: 18px; }
+@media (max-width: 820px) {
+  .app { height: auto; min-height: 100%; }
+  main { grid-template-columns: 1fr; }
+  .stage { height: 62vh; min-height: 360px; }
+  aside { border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bar { grid-template-columns: 100px minmax(0, 1fr) 34px; }
+}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">Herbinum<small>Prototyp</small></div>
+    <nav class="crumbs" id="crumbs" aria-label="Ebene"></nav>
+  </header>
+  <main>
+    <div class="stage" id="stage">
+      <div class="loading" id="loading">Karte wird geladen …</div>
+    </div>
+    <aside id="panel"></aside>
+  </main>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- Beispielspieler (Demo-Belegung, keine echten Spieler) ----------
+const PLAYERS = [
+  { name: "Du", col: "--p1" }, { name: "Spargelbaron", col: "--p2" }, { name: "Pättkesfahrer", col: "--p3" },
+  { name: "Kiepenkerl", col: "--p4" }, { name: "Wasserschloss", col: "--p5" }, { name: "Schützenkönig", col: "--p6" },
+];
+function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function ownerOf(id) {
+  if (id === "herbern-1") return 0;
+  const h = hash(id);
+  return h % 100 < 34 ? 1 + (h >>> 8) % 5 : -1;
+}
+function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909)) >>> 0) / 4294967296; }
+
+// ---------- Zustand ----------
+const state = { view: "region", ortId: null, berNr: null, mode: "besitzer", day: 60 };
+let REGION = null; const ORT = {};
+async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }
+async function loadOrt(id) { return ORT[id] ??= await getJSON(`data/ort/${id}.json`); }
+
+// ---------- SVG-Helfer ----------
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function dLine(c) { let d = "M" + c[0] + " " + c[1]; for (let i = 2; i < c.length; i += 2) d += "L" + c[i] + " " + c[i + 1]; return d; }
+function dPoly(rings) { return rings.map(r => dLine(r) + "Z").join(""); }
+
+// Pan + Zoom über die viewBox; skaliert Beschriftungen gegenläufig mit.
+function panZoom(svg, vb, onZoom) {
+  const set = () => { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); onZoom && onZoom(vb.w / Math.max(1, svg.clientWidth || 800)); };
+  const fit = () => {
+    const r = svg.clientWidth / Math.max(1, svg.clientHeight);
+    const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2;
+    if (vb.w / vb.h < r) vb.w = vb.h * r; else vb.h = vb.w / r;
+    vb.x = cx - vb.w / 2; vb.y = cy - vb.h / 2; set();
+  };
+  const zoomAt = (f, px, py) => {
+    const rect = svg.getBoundingClientRect();
+    const mx = vb.x + (px - rect.left) / rect.width * vb.w, my = vb.y + (py - rect.top) / rect.height * vb.h;
+    vb.w *= f; vb.h *= f; vb.x = mx - (mx - vb.x) * f; vb.y = my - (my - vb.y) * f; set();
+  };
+  let drag = null; svg._moved = false;
+  svg.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, vx: vb.x, vy: vb.y }; svg._moved = false; });
+  svg.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!svg._moved && Math.hypot(dx, dy) < 5) return;
+    if (!svg._moved) { svg._moved = true; svg.setPointerCapture(e.pointerId); svg.classList.add("dragging"); }
+    const k = vb.w / svg.clientWidth; vb.x = drag.vx - dx * k; vb.y = drag.vy - dy * k; set();
+  });
+  const end = () => { drag = null; svg.classList.remove("dragging"); };
+  svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
+  svg.addEventListener("click", e => { if (svg._moved) { e.stopPropagation(); e.preventDefault(); } }, true);
+  svg.addEventListener("wheel", e => { e.preventDefault(); zoomAt(e.deltaY > 0 ? 1.18 : 1 / 1.18, e.clientX, e.clientY); }, { passive: false });
+  const ro = new ResizeObserver(fit); ro.observe(svg);
+  const r = svg.getBoundingClientRect();
+  return { zoomIn: () => zoomAt(1 / 1.4, r.left + svg.clientWidth / 2, r.top + svg.clientHeight / 2), zoomOut: () => zoomAt(1.4, r.left + svg.clientWidth / 2, r.top + svg.clientHeight / 2), stop: () => ro.disconnect() };
+}
+
+let cleanup = () => {};
+function resetStage() {
+  cleanup(); cleanup = () => {};
+  const st = $("#stage"); st.innerHTML = ""; $("#panel").scrollTop = 0; return st;
+}
+function zoomButtons(st, pz) {
+  const z = document.createElement("div"); z.className = "zoom";
+  z.innerHTML = `<button type="button" aria-label="Hineinzoomen">+</button><button type="button" aria-label="Herauszoomen">−</button>`;
+  z.children[0].onclick = pz.zoomIn; z.children[1].onclick = pz.zoomOut; st.appendChild(z);
+}
+
+// ---------- Brotkrumen + Hash ----------
+function crumbs() {
+  const n = $("#crumbs"); n.innerHTML = "";
+  const add = (label, fn, cur) => {
+    if (n.children.length) n.insertAdjacentHTML("beforeend", "<span>›</span>");
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    if (cur) b.setAttribute("aria-current", "page"); else b.onclick = fn;
+    n.appendChild(b);
+  };
+  add("Region", () => go("region"), state.view === "region");
+  if (state.ortId) add(REGION.orte.find(o => o.id === state.ortId).name, () => go("ort", state.ortId), state.view === "ort");
+  if (state.view === "bereich") add(ORT[state.ortId].bereiche[state.berNr - 1].name, null, true);
+}
+async function go(view, ortId, berNr) {
+  state.view = view; state.ortId = view === "region" ? null : ortId; state.berNr = view === "bereich" ? berNr : null;
+  try { history.replaceState(null, "", view === "region" ? location.pathname : "#" + (view === "bereich" ? `${ortId}-${berNr}` : ortId)); } catch (e) {}
+  if (view === "region") renderRegion();
+  else { await loadOrt(ortId); view === "ort" ? renderOrt(berNr) : renderBereich(); }
+  crumbs();
+}
+
+// =====================================================================
+// 1) Regionskarte
+// =====================================================================
+function renderRegion() {
+  const st = resetStage(); const R = REGION; const Q = R.q;
+  const svg = el("svg", { role: "img", "aria-label": "Regionskarte Herbinum" }, st);
+  const xs = R.orte.map(o => o.x), ys = R.orte.map(o => o.y);
+  const vb = { x: Math.min(...xs) - 260, y: Math.min(...ys) - 220, w: Math.max(...xs) - Math.min(...xs) + 520, h: Math.max(...ys) - Math.min(...ys) + 440 };
+  el("rect", { x: -10000, y: -10000, width: 20000, height: 20000, fill: "var(--ground)" }, svg);
+  const g = el("g", {}, svg);
+  const poly = (list, fill) => list.forEach(rr => el("path", { d: dPoly(rr), fill, "fill-rule": "evenodd" }, g));
+  poly(R.forest, "var(--forest)"); poly(R.settle, "var(--settle)"); poly(R.water, "var(--water)");
+  R.rivers.forEach(([c, n, p]) => el("path", { d: dLine(p), fill: "none", stroke: "var(--waterline)", "stroke-width": c === 1 ? 2.4 : 1.1, "vector-effect": "non-scaling-stroke", "stroke-linecap": "round" }, g));
+  const roadW = { 1: 4.2, 2: 3, 3: 2.2, 4: 1.2 }, roadC = { 1: "var(--motorway)", 2: "var(--major)", 3: "var(--major)", 4: "var(--road)" };
+  for (const pass of ["case", "fill"]) for (const cls of [4, 3, 2, 1]) R.roads.filter(r => r[0] === cls).forEach(([c, ref, p]) => {
+    el("path", { d: dLine(p), fill: "none", stroke: pass === "case" ? (cls === 4 ? "var(--roadcase)" : "var(--majorcase)") : roadC[c],
+      "stroke-width": roadW[c] + (pass === "case" ? 1.4 : 0), "vector-effect": "non-scaling-stroke", "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+  });
+  R.rail.forEach(p => {
+    el("path", { d: dLine(p), fill: "none", stroke: "var(--rail)", "stroke-width": 2.2, "vector-effect": "non-scaling-stroke" }, g);
+    el("path", { d: dLine(p), fill: "none", stroke: "var(--panel)", "stroke-width": 1.2, "stroke-dasharray": "5 5", "vector-effect": "non-scaling-stroke" }, g);
+  });
+  // Orte
+  const labels = el("g", {}, svg);
+  const ringG = el("g", {}, svg);
+  const sel = { id: null };
+  R.orte.forEach(o => {
+    const n = o.n, occ = Array.from({ length: n }, (_, i) => ownerOf(`${o.id}-${i + 1}`));
+    const gg = el("g", { tabindex: 0, role: "button", "aria-label": `${o.name}, ${n} Bereiche`, style: "cursor:pointer" }, ringG);
+    el("circle", { cx: o.x, cy: o.y, r: o.r / Q, fill: "var(--accent)", "fill-opacity": 0.06, stroke: "var(--accent)", "stroke-width": 1.2, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke", class: "ring" }, gg);
+    // Belegungs-Kranz: ein Segment pro Bereich
+    const rr = o.r / Q * 0.42;
+    occ.forEach((ow, i) => {
+      const a0 = -Math.PI / 2 + i / n * 2 * Math.PI, a1 = a0 + 2 * Math.PI / n * 0.82;
+      el("path", { d: `M${o.x + Math.cos(a0) * rr} ${o.y + Math.sin(a0) * rr}A${rr} ${rr} 0 0 1 ${o.x + Math.cos(a1) * rr} ${o.y + Math.sin(a1) * rr}`,
+        fill: "none", stroke: ow >= 0 ? `var(${PLAYERS[ow].col})` : "var(--ink-soft)", "stroke-opacity": ow >= 0 ? 1 : .35, "stroke-width": 4, "vector-effect": "non-scaling-stroke" }, gg);
+    });
+    el("circle", { cx: o.x, cy: o.y, r: 3.2, fill: o.id === "herbern" ? "var(--p1)" : "var(--ink)", "vector-effect": "non-scaling-stroke" }, gg);
+    el("title", {}, gg).textContent = `${o.name} · ${n} Bereiche`;
+    gg.addEventListener("click", () => selectOrt(o.id));
+    gg.addEventListener("dblclick", () => go("ort", o.id));
+    gg.addEventListener("keydown", e => { if (e.key === "Enter") go("ort", o.id); });
+    const t = el("text", { x: o.x, y: o.y - o.r / Q - 8, "text-anchor": "middle", "font-weight": 700, "data-base": o.typ === "Stadt" ? 17 : 14 }, labels);
+    t.textContent = o.name;
+  });
+  R.pois.filter(p => p[0] === "castle").forEach(([k, n, x, y]) => {
+    el("rect", { x: x - 6, y: y - 6, width: 12, height: 12, fill: "var(--water)", stroke: "var(--ink)", "stroke-width": 1, "vector-effect": "non-scaling-stroke", transform: `rotate(45 ${x} ${y})` }, g);
+    const t = el("text", { x: x + 14, y: y + 4, "font-size": 10, "data-base": 11, "font-style": "italic" }, labels); t.textContent = n;
+  });
+  svg.appendChild(labels);
+  const pz = panZoom(svg, vb, k => labels.querySelectorAll("text").forEach(t => { t.setAttribute("font-size", t.dataset.base * k); t.setAttribute("stroke-width", 3 * k); }));
+  zoomButtons(st, pz); cleanup = pz.stop;
+  st.insertAdjacentHTML("beforeend", `<div class="compass">N ↑ · Raster 1 km = 100 Einheiten</div>`);
+
+  function selectOrt(id) {
+    sel.id = id; const o = R.orte.find(x => x.id === id);
+    ringG.querySelectorAll("g").forEach(gg => gg.querySelector(".ring").setAttribute("fill-opacity", gg.getAttribute("aria-label").startsWith(o.name + ",") ? 0.22 : 0.06));
+    panelOrtTeaser(o);
+  }
+  panelRegion(selectOrt);
+}
+
+function km(o) { return Math.hypot(o.x, o.y) / 100; }
+function panelRegion(selectOrt) {
+  const R = REGION, total = R.orte.reduce((s, o) => s + o.n, 0);
+  let occ = 0; R.orte.forEach(o => { for (let i = 1; i <= o.n; i++) if (ownerOf(`${o.id}-${i}`) >= 0) occ++; });
+  const orte = [...R.orte].sort((a, b) => km(a) - km(b));
+  $("#panel").innerHTML = `
+    <div><div class="eyebrow">Region · Südliches Münsterland</div><h1>21 Orte rund um Herbern</h1>
+    <p class="lead">Jeder Ort ist ein „Sonnensystem“, jeder Bereich darin ein „Planet“. Tippe einen Ort an, Doppelklick oder „Ort betreten“ öffnet ihn.</p></div>
+    <div class="stats"><div class="stat"><b>${R.orte.length}</b><span>Orte</span></div><div class="stat"><b>${total}</b><span>Bereiche</span></div><div class="stat"><b>${occ}</b><span>besiedelt (Beispiel)</span></div></div>
+    <div id="teaser"></div>
+    <div class="legend"><span><i style="background:var(--settle);outline:1px solid var(--line)"></i>Ortslage</span><span><i style="background:var(--forest)"></i>Wald</span><span><i style="background:var(--major)"></i>Bundes-/Landesstraße</span><span><i style="background:var(--motorway)"></i>A1</span><span><i style="background:var(--water)"></i>Gewässer</span></div>
+    <div><h2>Orte nach Entfernung</h2></div>
+    <div class="list" id="ortlist">${orte.map(o => {
+      const cells = Array.from({ length: o.n }, (_, i) => ownerOf(`${o.id}-${i + 1}`));
+      return `<button class="row" type="button" data-id="${o.id}"><span class="nr">${km(o).toFixed(1)}</span>
+        <span class="nm">${esc(o.name)}<span class="occ">${cells.map(c => `<i style="${c >= 0 ? `background:var(${PLAYERS[c].col})` : ""}"></i>`).join("")}</span></span>
+        <span class="val">${o.n} B.</span></button>`;
+    }).join("")}</div>
+    <p class="note">Kartendaten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a> (ODbL). Spieler und Belegung sind Beispieldaten. Zahl links = Luftlinie ab Herbern in km.</p>`;
+  $("#ortlist").querySelectorAll(".row").forEach(b => b.onclick = () => selectOrt(b.dataset.id));
+  selectOrt("herbern");
+}
+function panelOrtTeaser(o) {
+  const minutes = Math.round(km(o) * 1.3 / 25 * 60);
+  $("#ortlist")?.querySelectorAll(".row").forEach(b => b.classList.toggle("sel", b.dataset.id === o.id));
+  $("#teaser").innerHTML = `<div style="display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:14px">
+    <div class="eyebrow">${o.typ === "Stadt" ? "Stadt" : "Dorf"} · ${o.n} Bereiche</div><h2 style="font-size:22px">${esc(o.name)}</h2>
+    <div class="note">Treckerfahrt ab Herbern: ca. ${o.id === "herbern" ? 0 : minutes} min Spielzeit (bei 25 km/h über die Straße)</div>
+    <button class="btn" type="button" id="enter">Ort betreten</button></div>`;
+  $("#enter").onclick = () => go("ort", o.id);
+}
+
+// =====================================================================
+// 2) Ortsansicht
+// =====================================================================
+const AREA_FILL = {
+  residential: "--settle", commercial: "--industry", industrial: "--industry", retail: "--industry",
+  forest: "--forest", wood: "--forest", water: "--water", wetland: "--water",
+  meadow: "--green", grass: "--green", park: "--green", village_green: "--green", recreation_ground: "--green", allotments: "--green",
+  orchard: "--green", golf_course: "--green", cemetery: "--green", grave_yard: "--green", pitch: "--green", sports_centre: "--green", stadium: "--green", farmyard: "--settle",
+};
+const AREA_ORDER = ["residential", "farmyard", "commercial", "industrial", "retail", "meadow", "grass", "park", "village_green", "recreation_ground", "allotments", "orchard", "golf_course", "cemetery", "grave_yard", "pitch", "sports_centre", "stadium", "forest", "wood", "wetland", "water"];
+const SCORE_LABEL = { besitzer: "Besitzer", felder: "Bauplätze", lebensqualitaet: "Lebensqualität", wehr: "Wehrkraft", einkommen: "Einkommen" };
+function hex2rgb(h) { h = h.replace("#", ""); if (h.length === 3) h = [...h].map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function ramp(t) {
+  const a = hex2rgb(css("--ramp-lo")), b = hex2rgb(css("--ramp-hi"));
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+}
+function scoreOf(b, mode) { return mode === "felder" ? (b.felder - 12) / 28 * 100 : b.score[mode]; }
+
+function renderOrt(focusNr) {
+  const st = resetStage(); const D = ORT[state.ortId]; const R = D.r + 180;
+  const svg = el("svg", { role: "img", "aria-label": `Ortsplan ${D.name}` }, st);
+  const vb = { x: -R, y: -R, w: 2 * R, h: 2 * R };
+  el("rect", { x: -R * 3, y: -R * 3, width: R * 6, height: R * 6, fill: "var(--ground)" }, svg);
+  const g = el("g", {}, svg);
+  const byType = {}; D.areas.forEach(([t, rr]) => (byType[t] ??= []).push(rr));
+  AREA_ORDER.forEach(t => (byType[t] || []).forEach(rr => el("path", { d: dPoly(rr), fill: `var(${AREA_FILL[t]})`, "fill-rule": "evenodd" }, g)));
+  D.water.forEach(([c, n, p]) => el("path", { d: dLine(p), fill: "none", stroke: "var(--waterline)", "stroke-width": c === 1 ? 10 : 3, "stroke-linecap": "round" }, g));
+  const RW = { 1: 22, 2: 14, 3: 12, 4: 10, 5: 7 };
+  for (const pass of ["case", "fill"]) for (const cls of [5, 4, 3, 2, 1]) D.roads.filter(r => r[0] === cls).forEach(([c, n, p]) => {
+    el("path", { d: dLine(p), fill: "none", stroke: pass === "case" ? (c <= 3 ? "var(--majorcase)" : "var(--roadcase)") : (c === 1 ? "var(--motorway)" : c <= 3 ? "var(--major)" : "var(--road)"),
+      "stroke-width": RW[c] + (pass === "case" ? 2.5 : 0), "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+  });
+  D.rail.forEach(p => { el("path", { d: dLine(p), fill: "none", stroke: "var(--rail)", "stroke-width": 5 }, g); el("path", { d: dLine(p), fill: "none", stroke: "var(--panel)", "stroke-width": 2.5, "stroke-dasharray": "14 14" }, g); });
+  const bp = el("path", { d: D.buildings.map(dPoly).join(""), fill: "var(--bld)", "fill-rule": "evenodd" }, g);
+  el("circle", { cx: 0, cy: 0, r: D.r, fill: "none", stroke: "var(--ink)", "stroke-opacity": .5, "stroke-width": 1.5, "stroke-dasharray": "8 6", "vector-effect": "non-scaling-stroke" }, g);
+  // Bereiche
+  const bg = el("g", {}, svg); const labels = el("g", {}, svg);
+  const shapes = D.bereiche.map(b => {
+    const p = el("path", { d: b.poly.map(dPoly).join(""), "fill-rule": "evenodd", "stroke-width": 2.2, "vector-effect": "non-scaling-stroke", style: "cursor:pointer", tabindex: 0, role: "button", "aria-label": `Bereich ${b.nr}: ${b.name}` }, bg);
+    el("title", {}, p).textContent = `${b.nr} · ${b.name} (${b.typ})`;
+    p.addEventListener("click", () => select(b.nr));
+    p.addEventListener("dblclick", () => go("bereich", D.id, b.nr));
+    p.addEventListener("keydown", e => { if (e.key === "Enter") go("bereich", D.id, b.nr); });
+    const lg = el("g", { "pointer-events": "none" }, labels);
+    const c = el("circle", { cx: b.lx, cy: b.ly, r: 14, fill: "var(--panel)", stroke: "var(--ink)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, lg);
+    const t1 = el("text", { x: b.lx, y: b.ly, "text-anchor": "middle", "dominant-baseline": "central", "font-weight": 700, "data-base": 13 }, lg); t1.textContent = b.nr;
+    const t2 = el("text", { x: b.lx, y: b.ly + 26, "text-anchor": "middle", "data-base": 12.5, "data-dy": 26 }, lg); t2.textContent = b.name;
+    return { b, p, c, t2 };
+  });
+  D.pois.filter(p => ["worship", "castle", "station"].includes(p[0])).forEach(([k, n, x, y]) => {
+    const s = el("g", { transform: `translate(${x} ${y})`, "pointer-events": "none" }, labels);
+    if (k === "worship") { el("path", { d: "M-1.5-9h3v5h5v3h-5v10h-3V-1h-5v-3h5z", fill: "var(--ink)", class: "sym" }, s); }
+    else if (k === "castle") { el("path", { d: "M-8 8V-6h3v3h3v-3h4v3h3v-3h3V8z", fill: "var(--accent)", stroke: "var(--panel)", "stroke-width": 1, class: "sym" }, s); }
+    else el("rect", { x: -7, y: -5, width: 14, height: 10, rx: 2, fill: "var(--rail)", class: "sym" }, s);
+    if (n && k !== "worship") { const t = el("text", { x: 12, y: 4, "data-base": 11.5, "font-style": "italic" }, s); t.textContent = n; }
+  });
+  function paint() {
+    shapes.forEach(({ b, p }) => {
+      const sel = b.nr === state.berNr;
+      if (state.mode === "besitzer") {
+        const ow = ownerOf(b.id);
+        p.setAttribute("fill", ow >= 0 ? `var(${PLAYERS[ow].col})` : "transparent"); p.setAttribute("fill-opacity", ow >= 0 ? .26 : 0);
+        p.setAttribute("stroke", ow >= 0 ? `var(${PLAYERS[ow].col})` : "var(--ink)"); p.setAttribute("stroke-dasharray", ow >= 0 ? "" : "6 5");
+      } else {
+        p.setAttribute("fill", ramp(scoreOf(b, state.mode) / 100)); p.setAttribute("fill-opacity", .62);
+        p.setAttribute("stroke", "var(--ink)"); p.setAttribute("stroke-dasharray", "");
+      }
+      p.setAttribute("stroke-width", sel ? 4.5 : 2);
+      p.setAttribute("stroke-opacity", sel ? 1 : .7);
+    });
+  }
+  function select(nr) { state.berNr = nr; paint(); panelBereichTeaser(D, nr); }
+  const pz = panZoom(svg, vb, k => {
+    labels.querySelectorAll("text").forEach(t => { t.setAttribute("font-size", t.dataset.base * k); t.setAttribute("stroke-width", 3 * k); if (t.dataset.dy) t.setAttribute("y", +t.previousSibling.getAttribute("y") + t.dataset.dy * k); });
+    labels.querySelectorAll("circle").forEach(c => c.setAttribute("r", 13 * k));
+    labels.querySelectorAll(".sym").forEach(s => s.setAttribute("transform", `scale(${k * 1.1})`));
+    bp.setAttribute("fill-opacity", k > 2.2 ? .55 : 1);
+  });
+  zoomButtons(st, pz); cleanup = pz.stop;
+  const modes = document.createElement("div"); modes.className = "modes"; modes.setAttribute("role", "group"); modes.setAttribute("aria-label", "Färbung der Bereiche");
+  modes.innerHTML = Object.entries(SCORE_LABEL).map(([k, v]) => `<button type="button" data-m="${k}" aria-pressed="${state.mode === k}">${v}</button>`).join("");
+  modes.querySelectorAll("button").forEach(b => b.onclick = () => { state.mode = b.dataset.m; modes.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); paint(); panelBereichTeaser(D, state.berNr); });
+  st.appendChild(modes);
+  st.insertAdjacentHTML("beforeend", `<div class="compass">N ↑ · Kreis = Ortsgrenze im Spiel (${(D.r / 1000).toFixed(1)} km)</div>`);
+  paint();
+  panelOrt(D, select);
+  select(focusNr || 1);
+}
+
+function scoreBars(b) {
+  const rows = [["Bauplätze", (b.felder - 12) / 28 * 100, b.felder], ["Lebensqualität", b.score.lebensqualitaet], ["Wehrkraft", b.score.wehr], ["Einkommen", b.score.einkommen]];
+  return `<div class="bars">${rows.map(([l, v, shown]) => `<div class="bar"><span>${l}</span><div class="track"><div class="fill" style="width:${Math.max(3, v)}%"></div></div><b>${shown ?? Math.round(v)}</b></div>`).join("")}</div>`;
+}
+function modsHTML(b) {
+  return `<div class="mods">${[["Holz", b.mod.holz], ["Ziegel", b.mod.ziegel], ["Korn", b.mod.korn], ["Strom", b.mod.strom]]
+    .map(([l, v]) => `<div class="mod"><span>${l}</span><b>×${v.toFixed(2)}</b></div>`).join("")}</div>`;
+}
+function ownerHTML(id) {
+  const ow = ownerOf(id);
+  return ow >= 0 ? `<span class="owner"><i style="background:var(${PLAYERS[ow].col})"></i>${esc(PLAYERS[ow].name)}</span>` : `<span class="owner"><i style="background:var(--line)"></i>frei – besiedelbar</span>`;
+}
+function panelOrt(D, select) {
+  const list = [...D.bereiche];
+  $("#panel").innerHTML = `
+    <div><div class="eyebrow">Ort · ${D.bereiche.length} Bereiche</div><h1>${esc(D.name)}</h1>
+    <p class="lead">Straßen, Gebäude und Flächen stammen aus OpenStreetMap. Die Bereiche sind aus der echten Bebauung abgeleitet, ihre Werte aus Wald, Wasser, Gewerbe, Straßen und Landmarken darin.</p></div>
+    <div id="teaser"></div>
+    <div><h2>Alle Bereiche</h2></div>
+    <div class="list" id="blist">${list.map(b => `<button class="row" type="button" data-nr="${b.nr}"><span class="nr">${b.nr}</span>
+      <span class="nm">${esc(b.name)}<span class="sub">${b.typ} · ${b.felder} Bauplätze</span></span><span class="val" data-v="${b.nr}"></span></button>`).join("")}</div>
+    <p class="note">Kartendaten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a> (ODbL).</p>`;
+  $("#blist").querySelectorAll(".row").forEach(r => r.onclick = () => select(+r.dataset.nr));
+}
+function panelBereichTeaser(D, nr) {
+  const b = D.bereiche[nr - 1];
+  $("#blist")?.querySelectorAll(".row").forEach(r => r.classList.toggle("sel", +r.dataset.nr === nr));
+  $("#blist")?.querySelectorAll("[data-v]").forEach(v => {
+    const bb = D.bereiche[+v.dataset.v - 1];
+    v.innerHTML = state.mode === "besitzer" ? (ownerOf(bb.id) >= 0 ? `<i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(${PLAYERS[ownerOf(bb.id)].col})"></i>` : "frei")
+      : (state.mode === "felder" ? bb.felder : bb.score[state.mode]);
+  });
+  $("#teaser").innerHTML = `<div style="display:grid;gap:12px;border:1px solid var(--line);border-radius:10px;padding:14px">
+    <div class="eyebrow">Bereich ${b.nr} · ${b.typ} · ${b.ha} ha</div><h2 style="font-size:22px">${esc(b.name)}</h2>
+    <div>${ownerHTML(b.id)}</div>${scoreBars(b)}
+    <div><div class="eyebrow" style="margin-bottom:6px">Produktions-Boni durch die Lage</div>${modsHTML(b)}</div>
+    <button class="btn" type="button" id="enterB">Bereich ansehen</button></div>`;
+  $("#enterB").onclick = () => go("bereich", D.id, nr);
+}
+
+// =====================================================================
+// 3) Bereichsansicht (isometrisch, wächst mit dem Spielfortschritt)
+// =====================================================================
+const BUILD = {
+  haupthaus: { name: "Hofstelle (Haupthaus)", role: "Baugeschwindigkeit, Einwohner" },
+  holz: { name: "Holzplatz", role: "Holz" },
+  ziegel: { name: "Ziegelei", role: "Ziegel" },
+  korn: { name: "Acker & Hof", role: "Korn" },
+  strom: { name: "Windrad", role: "Strom" },
+  lager: { name: "Scheune", role: "Lager" },
+  wohnen: { name: "Wohnhaus", role: "Einwohner → Taler" },
+  schule: { name: "Dorfschule", role: "Forschung" },
+  gasthof: { name: "Gasthof", role: "Lebensqualität" },
+  werkstatt: { name: "Landmaschinen-Werkstatt", role: "Fahrzeuge" },
+  schuetzen: { name: "Schützenhalle", role: "Wehr / Schützen" },
+  markt: { name: "Marktplatz", role: "Handel, Taler" },
+};
+// Bauplan des Beispielspielers: "+" = zusätzliches Gebäude gleichen Typs
+const ORDER = "haupthaus holz korn ziegel holz korn haupthaus strom ziegel holz lager korn wohnen haupthaus strom ziegel schule holz korn wohnen gasthof haupthaus strom+ ziegel lager werkstatt korn+ holz wohnen+ schuetzen schule haupthaus markt strom ziegel korn wohnen+ holz+ gasthof haupthaus strom+ werkstatt schuetzen korn+ wohnen+ ziegel lager markt schule haupthaus wohnen+ strom holz korn ziegel korn+ wohnen+ gasthof haupthaus strom+ schuetzen holz+ ziegel markt lager wohnen+ schule korn haupthaus wohnen+ strom".split(" ");
+const DAYS = 120;
+function simulate(day, nPlots) {
+  const steps = Math.min(ORDER.length, Math.floor((day / DAYS) * ORDER.length * 1.02) + 1);
+  const bld = []; // {type, lvl, plot, born}
+  for (let i = 0; i < steps; i++) {
+    const tk = ORDER[i], t = tk.replace("+", ""), plus = tk.endsWith("+");
+    const existing = bld.filter(b => b.type === t);
+    if (!existing.length || plus) { if (bld.length < nPlots) bld.push({ type: t, lvl: 1, plot: bld.length, born: i }); else if (existing.length) existing[0].lvl++; }
+    else existing.sort((a, b) => a.lvl - b.lvl)[0].lvl++;
+  }
+  return bld;
+}
+function production(bld, b) {
+  const f = L => L * Math.pow(1.1, L);
+  const sum = t => bld.filter(x => x.type === t).reduce((s, x) => s + f(x.lvl), 0);
+  const strom = 30 * sum("strom") * b.mod.strom;
+  const need = 8 * (sum("holz") + sum("ziegel")) + 4 * sum("korn");
+  const eff = need > 0 ? Math.min(1, strom / need) : 1;
+  const einw = Math.round((30 * f(bld.find(x => x.type === "haupthaus")?.lvl || 0) + 45 * sum("wohnen")) * (0.7 + b.score.lebensqualitaet / 160));
+  return {
+    holz: Math.round((20 + 30 * sum("holz") * b.mod.holz * eff)), ziegel: Math.round((10 + 22 * sum("ziegel") * b.mod.ziegel * eff)),
+    korn: Math.round((5 + 18 * sum("korn") * b.mod.korn * eff) - einw * 0.05), taler: Math.round(einw * 0.04 * (0.5 + b.score.einkommen / 100) + 12 * sum("markt")),
+    strom: Math.round(strom), need: Math.round(need), eff, einw,
+  };
+}
+
+function pip(x, y, rings) { let c = false; for (const r of rings) for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+function segDist(px, py, c) { let m = 1e9; for (let i = 0; i + 3 < c.length; i += 2) { const ax = c[i], ay = c[i + 1], bx = c[i + 2], by = c[i + 3], dx = bx - ax, dy = by - ay; const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1))); m = Math.min(m, Math.hypot(px - ax - t * dx, py - ay - t * dy)); } return m; }
+
+function layoutPlots(D, b) {
+  const G = 34, poly = b.poly, rnd = rng(hash(b.id));
+  const xs = poly.flatMap(p => p[0].filter((_, i) => i % 2 === 0)), ys = poly.flatMap(p => p[0].filter((_, i) => i % 2 === 1));
+  const cx = b.lx, cy = b.ly;
+  const roads = D.roads.map(r => r[2]);
+  const water = D.areas.filter(a => a[0] === "water").map(a => a[1]);
+  const cand = [];
+  for (let x = Math.min(...xs); x < Math.max(...xs); x += G) for (let y = Math.min(...ys); y < Math.max(...ys); y += G) {
+    const px = x + G / 2, py = y + G / 2;
+    if (!poly.some(p => pip(px, py, p))) continue;
+    if (water.some(w => pip(px, py, w))) continue;
+    const rd = Math.min(...roads.map(r => segDist(px, py, r)), 1e9);
+    if (rd < 15) continue;
+    cand.push({ x: px, y: py, d: Math.hypot(px - cx, py - cy) + rnd() * G * 0.8, rd });
+  }
+  cand.sort((a, b) => a.d - b.d);
+  return cand.slice(0, b.felder);
+}
+
+function renderBereich() {
+  const st = resetStage(); const D = ORT[state.ortId]; const b = D.bereiche[state.berNr - 1];
+  const cv = document.createElement("canvas"); cv.setAttribute("role", "img"); cv.setAttribute("aria-label", `Isometrische Ansicht von ${b.name}`); st.appendChild(cv);
+  st.insertAdjacentHTML("beforeend", `<div class="compass">Isometrisch · Norden oben rechts · 1 Bauplatz ≈ 34 × 34 m</div>`);
+  const plots = layoutPlots(D, b);
+  const nPlots = plots.length;
+  const ctx = cv.getContext("2d");
+  const C = Math.cos(Math.PI / 6), Sn = 0.5;
+  const ox = b.lx, oy = b.ly;
+  // Ausschnitt: die Bauplätze plus Rand, in Iso-Koordinaten
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  const M = 48;
+  (plots.length ? plots : [{ x: ox, y: oy }]).forEach(p => [[-M, -M], [M, -M], [M, M], [-M, M]].forEach(([dx, dy]) => {
+    const u = p.x + dx - ox, v = p.y + dy - oy, X = (u - v) * C, Y = (u + v) * Sn;
+    minX = Math.min(minX, X); maxX = Math.max(maxX, X); minY = Math.min(minY, Y); maxY = Math.max(maxY, Y);
+  }));
+  // Bäume (Waldanteil + lose Streuung am Rand)
+  const rnd = rng(hash(b.id + "t"));
+  const forests = D.areas.filter(a => a[0] === "forest" || a[0] === "wood").map(a => a[1]);
+  const trees = [];
+  const span = Math.max(maxX - minX, maxY - minY) * 1.2;
+  for (let i = 0; i < 900 && trees.length < 160; i++) {
+    const x = b.lx + (rnd() - .5) * span, y = b.ly + (rnd() - .5) * span;
+    if (!b.poly.some(p => pip(x, y, p))) continue;
+    const inForest = forests.some(f => pip(x, y, f));
+    if (!inForest && rnd() > 0.08 + b.mix.wald * 0.4) continue;
+    if (plots.some(p => Math.abs(p.x - x) < 22 && Math.abs(p.y - y) < 22)) continue;
+    if (D.roads.some(r => segDist(x, y, r[2]) < 9)) continue;
+    trees.push({ x, y, s: 0.8 + rnd() * 0.6 });
+  }
+  let W = 0, H = 0, s = 1, X0 = 0, Y0 = 0, raf = 0, t0 = performance.now();
+  const P = (x, y, h = 0) => { const u = x - ox, v = y - oy; return [X0 + (u - v) * C * s, Y0 + (u + v) * Sn * s - h * s]; };
+  function size() {
+    const dpr = Math.min(2, devicePixelRatio || 1); W = st.clientWidth; H = st.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    s = Math.min((W - 40) / (maxX - minX), (H - 70) / (maxY - minY + 40));
+    X0 = W / 2 - (minX + maxX) / 2 * s; Y0 = H / 2 - (minY + maxY) / 2 * s + 20 * s + 10;
+  }
+  const quad = (pts, fill, stroke) => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 0.6; ctx.stroke(); } };
+  function box(x, y, w, d, h, top, left, right, z = 0) {
+    const A = P(x, y, z + h), B = P(x + w, y, z + h), Cc = P(x + w, y + d, z + h), Dd = P(x, y + d, z + h);
+    const b0 = P(x + w, y, z), c0 = P(x + w, y + d, z), d0 = P(x, y + d, z);
+    quad([Dd, Cc, c0, d0], left); quad([B, Cc, c0, b0], right); quad([A, B, Cc, Dd], top);
+  }
+  function gable(x, y, w, d, h, rh, c1, c2, gableCol) {
+    const r0 = P(x, y + d / 2, h + rh), r1 = P(x + w, y + d / 2, h + rh);
+    quad([P(x, y, h), P(x + w, y, h), r1, r0], c2);
+    quad([P(x + w, y, h), P(x + w, y + d, h), r1], gableCol);
+    quad([P(x, y + d, h), P(x + w, y + d, h), r1, r0], c1);
+  }
+  function house(x, y, w, d, h, lvl, opt = {}) {
+    const klinker = lvl >= 4 || opt.klinker;
+    const wall = klinker ? css("--brick") : css("--plaster"), wall2 = klinker ? css("--brick-dark") : shade(css("--plaster"), -.12);
+    box(x, y, w, d, h, wall, wall, wall2);
+    if (!klinker) { // Fachwerk-Balken
+      ctx.strokeStyle = css("--beam"); ctx.lineWidth = Math.max(0.6, s * 0.5);
+      for (let k = 0; k <= 3; k++) { const a = P(x + w * k / 3, y + d, 0), c = P(x + w * k / 3, y + d, h); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...c); ctx.stroke(); }
+      const a = P(x, y + d, h * .55), c = P(x + w, y + d, h * .55); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...c); ctx.stroke();
+    }
+    // Fenster
+    ctx.fillStyle = shade(css("--water"), -.25);
+    const nw = Math.max(1, Math.floor(w / 5));
+    for (let k = 0; k < nw; k++) { const p = P(x + (k + .5) * w / nw, y + d, h * .45); ctx.fillRect(p[0] - s * .9, p[1] - s * 1.6, s * 1.8, s * 1.6); }
+    const roof = opt.roof || (klinker ? css("--roof-dark") : css("--roof"));
+    gable(x, y, w, d, h, opt.rh ?? Math.min(w, d) * .55, roof, shade(roof, -.18), wall2);
+  }
+  function shade(col, k) { const [r, g, b2] = col.startsWith("#") ? hex2rgb(col) : col.match(/\d+/g).map(Number); const f = v => Math.max(0, Math.min(255, Math.round(v + (k > 0 ? (255 - v) * k : v * k)))); return `rgb(${f(r)},${f(g)},${f(b2)})`; }
+  function tree(x, y, k) {
+    const base = P(x, y, 0), top = P(x, y, 7 * k);
+    ctx.strokeStyle = css("--beam"); ctx.lineWidth = Math.max(1, s * .7); ctx.beginPath(); ctx.moveTo(...base); ctx.lineTo(top[0], top[1] + 2 * s); ctx.stroke();
+    ctx.fillStyle = css("--tree-dark"); ctx.beginPath(); ctx.ellipse(top[0], top[1], 4.4 * k * s, 4.8 * k * s, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = css("--tree"); ctx.beginPath(); ctx.ellipse(top[0] - k * s, top[1] - k * s, 3.2 * k * s, 3.4 * k * s, 0, 0, 7); ctx.fill();
+  }
+  function field(x, y, sz, lvl) {
+    const pts = [P(x, y), P(x + sz, y), P(x + sz, y + sz), P(x, y + sz)];
+    quad(pts, css("--field"));
+    ctx.strokeStyle = css("--field-row"); ctx.lineWidth = Math.max(.6, s * .5);
+    const rows = 4 + lvl;
+    for (let k = 1; k < rows; k++) { const a = P(x + sz * k / rows, y), c = P(x + sz * k / rows, y + sz); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...c); ctx.stroke(); }
+  }
+  function draw(now) {
+    const day = state.day, bld = simulate(day, nPlots), t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = css("--ground"); ctx.fillRect(0, 0, W, H);
+    // Grundfläche des Bereichs
+    ctx.save(); ctx.beginPath();
+    b.poly.forEach(pp => pp.forEach(r => { for (let i = 0; i < r.length; i += 2) { const p = P(r[i], r[i + 1]); i ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.closePath(); }));
+    ctx.fillStyle = css("--grass"); ctx.fill("evenodd"); ctx.strokeStyle = css("--grass-edge"); ctx.lineWidth = 2; ctx.stroke(); ctx.clip("evenodd");
+    const areaPath = (rr, col) => { ctx.beginPath(); rr.forEach(r => { for (let i = 0; i < r.length; i += 2) { const p = P(r[i], r[i + 1]); i ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.closePath(); }); ctx.fillStyle = col; ctx.fill("evenodd"); };
+    D.areas.forEach(([k, rr]) => { if (k === "forest" || k === "wood") areaPath(rr, shade(css("--grass"), -.12)); if (k === "water" || k === "wetland") areaPath(rr, css("--water")); });
+    D.water.forEach(([c, n, p]) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) { const q = P(p[i], p[i + 1]); i ? ctx.lineTo(...q) : ctx.moveTo(...q); } ctx.strokeStyle = css("--waterline"); ctx.lineWidth = (c === 1 ? 9 : 3.5) * s; ctx.stroke(); });
+    // echte Straßen
+    const RW = { 1: 20, 2: 11, 3: 9, 4: 8, 5: 6 };
+    D.roads.forEach(([c, n, p]) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) { const q = P(p[i], p[i + 1]); i ? ctx.lineTo(...q) : ctx.moveTo(...q); } ctx.strokeStyle = css("--asphalt"); ctx.lineWidth = RW[c] * s; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); });
+    // Pättkes: jedes Gebäude verbindet sich mit dem nächstgelegenen älteren
+    ctx.strokeStyle = css("--path"); ctx.lineWidth = 4 * s; ctx.lineCap = "round";
+    bld.forEach((x, i) => { if (!i) return; const p = plots[x.plot]; let best = plots[0], bd = 1e9; for (let j = 0; j < i; j++) { const q = plots[bld[j].plot], dd = Math.hypot(p.x - q.x, p.y - q.y); if (dd < bd) { bd = dd; best = q; } } ctx.beginPath(); ctx.moveTo(...P(p.x, p.y)); ctx.lineTo(...P(p.x, best.y)); ctx.lineTo(...P(best.x, best.y)); ctx.stroke(); });
+    // freie Bauplätze andeuten
+    plots.forEach((p, i) => { if (i < bld.length) return; const h = 13; quad([P(p.x - h, p.y - h), P(p.x + h, p.y - h), P(p.x + h, p.y + h), P(p.x - h, p.y + h)], "transparent"); ctx.setLineDash([3, 3]); ctx.strokeStyle = css("--grass-edge"); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); });
+    // Tiefensortierung: Gebäude + Bäume
+    const items = trees.map(tr => ({ d: tr.x + tr.y, f: () => tree(tr.x, tr.y, tr.s) }));
+    bld.forEach(x => { const p = plots[x.plot]; items.push({ d: p.x + p.y, f: () => drawBuilding(x, p.x, p.y, t) }); });
+    items.sort((a, b2) => a.d - b2.d).forEach(it => it.f());
+    ctx.restore();
+    if (!reduceMotion && state.view === "bereich") raf = requestAnimationFrame(draw);
+  }
+  function drawBuilding(x, cx, cy, t) {
+    const L = x.lvl, g = 1 + Math.min(L, 10) * 0.07;
+    switch (x.type) {
+      case "haupthaus": {
+        const w = 13 * g, d = 9 * g, h = 5 + L * .6;
+        house(cx - w / 2, cy - d / 2, w, d, h, L, { rh: d * .7 });
+        if (L >= 5) house(cx - w / 2 - 7, cy + d / 2 - 2, 7, 10, h * .8, L);
+        if (L >= 8) { box(cx + w / 2 - 3, cy - d / 2 - 3, 4, 4, h + 9, css("--roof-dark"), css("--brick"), css("--brick-dark")); }
+        break;
+      }
+      case "holz": {
+        for (let k = 0; k < Math.min(6, 1 + Math.ceil(L / 2)); k++) box(cx - 9 + (k % 3) * 5.5, cy + 2 + Math.floor(k / 3) * 4.5, 5, 3.6, 2.4 + (k % 2), shade(css("--beam"), .55), shade(css("--beam"), .3), shade(css("--beam"), .15));
+        house(cx - 6, cy - 9, 9, 7, 3.5, 1, { roof: css("--roof-dark") });
+        break;
+      }
+      case "ziegel": {
+        house(cx - 9, cy - 6, 14 * g, 9, 4 + L * .3, 5);
+        const ch = 12 + L * 1.6; box(cx + 6, cy - 3, 3, 3, ch, css("--brick-dark"), css("--brick"), css("--brick-dark"));
+        if (!reduceMotion) { const top = P(cx + 7.5, cy - 1.5, ch); for (let k = 0; k < 3; k++) { const ph = (t * .5 + k / 3) % 1; ctx.fillStyle = `rgba(160,160,160,${.45 * (1 - ph)})`; ctx.beginPath(); ctx.arc(top[0] + ph * 10 * s, top[1] - ph * 16 * s, (2 + ph * 4) * s, 0, 7); ctx.fill(); } }
+        break;
+      }
+      case "korn": {
+        field(cx - 15, cy - 15, 30, L);
+        if (L >= 3) house(cx - 14, cy - 14, 8, 6, 3.2, L, { roof: css("--roof") });
+        if (L >= 6) box(cx + 8, cy - 14, 4.5, 4.5, 11, css("--asphalt"), shade(css("--asphalt"), .25), shade(css("--asphalt"), -.1));
+        break;
+      }
+      case "strom": {
+        const hh = 24 + L * 3, base = P(cx, cy), hub = P(cx, cy, hh);
+        ctx.strokeStyle = shade(css("--panel"), -.05); ctx.lineWidth = Math.max(1.5, 1.6 * s); ctx.beginPath(); ctx.moveTo(...base); ctx.lineTo(...hub); ctx.stroke();
+        ctx.strokeStyle = css("--ink-soft"); ctx.lineWidth = .6; ctx.stroke();
+        const a0 = reduceMotion ? .3 : t * 1.4 + cx;
+        ctx.fillStyle = shade(css("--panel"), -.04); ctx.strokeStyle = css("--ink-soft"); ctx.lineWidth = .6;
+        for (let k = 0; k < 3; k++) { const a = a0 + k * 2.094, len = (9 + L) * s; ctx.beginPath(); ctx.moveTo(...hub); ctx.lineTo(hub[0] + Math.cos(a) * len - Math.sin(a) * 1.2 * s, hub[1] + Math.sin(a) * len * .9 + Math.cos(a) * 1.2 * s); ctx.lineTo(hub[0] + Math.cos(a) * len, hub[1] + Math.sin(a) * len * .9); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        ctx.fillStyle = css("--ink-soft"); ctx.beginPath(); ctx.arc(hub[0], hub[1], 1.4 * s, 0, 7); ctx.fill();
+        break;
+      }
+      case "lager": house(cx - 9 * g, cy - 6, 18 * g, 12, 5 + L * .4, 1, { roof: css("--roof-dark"), rh: 8 }); break;
+      case "wohnen": house(cx - 5.5, cy - 4.5, 11, 9, 4.2 + Math.min(L, 6) * .5, L); if (L >= 4) house(cx + 1, cy + 1, 7, 7, 4, L); break;
+      case "schule": house(cx - 9, cy - 5, 16, 10, 5.5, Math.max(L, 4)); box(cx + 3, cy - 3, 3, 3, 12, css("--roof-dark"), css("--plaster"), shade(css("--plaster"), -.12)); break;
+      case "gasthof": { house(cx - 7, cy - 6, 13, 10, 5, L, { roof: css("--roof") }); const p = P(cx + 7, cy + 4, 6); ctx.fillStyle = css("--field"); ctx.fillRect(p[0], p[1], 4 * s, 3 * s); break; }
+      case "werkstatt": { box(cx - 9, cy - 7, 18, 13, 5 + L * .3, css("--asphalt"), shade(css("--asphalt"), .15), shade(css("--asphalt"), -.15)); const p = P(cx - 3, cy + 6, 0); ctx.fillStyle = css("--beam"); ctx.fillRect(p[0], p[1] - 4 * s, 6 * s, 4 * s); box(cx + 4, cy + 8, 4, 2.5, 2.4, css("--p2"), css("--p2"), shade(css("--p2"), -.2)); break; }
+      case "schuetzen": { house(cx - 11, cy - 5, 20, 10, 5, Math.max(L, 4), { roof: css("--roof-dark") }); const b0 = P(cx + 11, cy - 5), b1 = P(cx + 11, cy - 5, 20); ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...b0); ctx.lineTo(...b1); ctx.stroke(); const wv = reduceMotion ? 0 : Math.sin(t * 3) * 1.5; ctx.fillStyle = css("--p2"); ctx.beginPath(); ctx.moveTo(...b1); ctx.lineTo(b1[0] + 8 * s, b1[1] + 2 * s + wv); ctx.lineTo(b1[0], b1[1] + 5 * s); ctx.fill(); break; }
+      case "markt": { const cols = ["--p1", "--p4", "--p5", "--p2"]; for (let k = 0; k < Math.min(4, 1 + L); k++) { const xx = cx - 10 + (k % 2) * 11, yy = cy - 8 + Math.floor(k / 2) * 10; box(xx, yy, 7, 6, 2.5, css("--plaster"), css("--plaster"), shade(css("--plaster"), -.1)); gable(xx, yy, 7, 6, 3.5, 2, css(cols[k]), shade(css(cols[k]), -.2), css(cols[k])); } break; }
+    }
+  }
+  size(); draw(performance.now());
+  const ro = new ResizeObserver(() => { size(); if (reduceMotion) draw(performance.now()); }); ro.observe(st);
+  cleanup = () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  panelBereich(D, b, nPlots, () => { if (reduceMotion) draw(performance.now()); });
+}
+
+function panelBereich(D, b, nPlots, redraw) {
+  $("#panel").innerHTML = `
+    <div><div class="eyebrow">${esc(D.name)} · Bereich ${b.nr} · ${b.typ}</div><h1>${esc(b.name)}</h1>
+    <p class="lead">Echte Straßen, Wald und Wasser bilden den Untergrund. Darauf wächst die Siedlung des Beispielspielers um die Hofstelle herum – Bauplätze entstehen dort, wo im echten Ort Platz zwischen den Straßen ist.</p></div>
+    <div>${ownerHTML(b.id)}</div>
+    <div class="timeline"><div class="eyebrow">Spielfortschritt</div>
+      <div class="ctl"><button class="tool" type="button" id="play" aria-label="Wachstum abspielen">▶</button>
+      <input type="range" id="day" min="1" max="${DAYS}" value="${state.day}" aria-label="Spieltag"><output id="dayout"></output></div></div>
+    <table class="prod" id="prod"></table>
+    <div><div class="eyebrow" style="margin-bottom:8px">Werte des Bereichs</div>${scoreBars(b)}</div>
+    <div><div class="eyebrow" style="margin-bottom:6px">Produktions-Boni durch die Lage</div>${modsHTML(b)}</div>
+    <div><h2 style="margin-bottom:6px">Gebäude</h2><table class="prod" id="blds"></table></div>
+    <p class="note">${nPlots < b.felder ? `Hier passen nur ${nPlots} von ${b.felder} Bauplätzen zwischen die echten Straßen. ` : ""}Produktion pro Stunde, Formeln wie in OGame (Stufe × 1,1^Stufe), gedämpft, wenn der Strom nicht reicht.</p>`;
+  const upd = () => {
+    const bld = simulate(state.day, nPlots), p = production(bld, b);
+    $("#dayout").textContent = `Tag ${state.day}`;
+    $("#prod").innerHTML = `<tr><th>Rohstoff</th><th style="text-align:right">pro Stunde</th></tr>
+      <tr><td>Holz</td><td class="n">${p.holz}</td></tr><tr><td>Ziegel</td><td class="n">${p.ziegel}</td></tr>
+      <tr><td>Korn (abzgl. Verbrauch)</td><td class="n">${p.korn}</td></tr><tr><td>Taler</td><td class="n">${p.taler}</td></tr>
+      <tr><td>Strom</td><td class="n">${p.strom} / ${p.need}${p.eff < 1 ? " ⚠" : ""}</td></tr><tr><td>Einwohner</td><td class="n">${p.einw}</td></tr>
+      <tr><td>Bauplätze belegt</td><td class="n">${bld.length} / ${nPlots}</td></tr>`;
+    const grouped = {}; bld.forEach(x => (grouped[x.type] ??= []).push(x.lvl));
+    $("#blds").innerHTML = `<tr><th>Gebäude</th><th>Wirkung</th><th style="text-align:right">Stufe</th></tr>` +
+      Object.entries(grouped).map(([k, l]) => `<tr><td>${BUILD[k].name}${l.length > 1 ? ` ×${l.length}` : ""}</td><td>${BUILD[k].role}</td><td class="n">${l.join(", ")}</td></tr>`).join("");
+  };
+  const slider = $("#day");
+  slider.oninput = () => { state.day = +slider.value; upd(); redraw(); };
+  let timer = 0;
+  $("#play").onclick = () => {
+    if (timer) { clearInterval(timer); timer = 0; $("#play").textContent = "▶"; return; }
+    if (state.day >= DAYS) state.day = 1;
+    $("#play").textContent = "❚❚";
+    timer = setInterval(() => { state.day = Math.min(DAYS, state.day + 1); slider.value = state.day; upd(); redraw(); if (state.day >= DAYS || state.view !== "bereich") { clearInterval(timer); timer = 0; const pb = $("#play"); if (pb) pb.textContent = "▶"; } }, 110);
+  };
+  upd();
+}
+
+// ---------- Start ----------
+(async () => {
+  try {
+    REGION = await getJSON("data/region.json");
+    const h = (location.hash || "").slice(1);
+    const m = h.match(/^([a-z-]+?)(?:-(\d+))?$/);
+    if (m && REGION.orte.some(o => o.id === m[1])) await go(m[2] ? "bereich" : "ort", m[1], m[2] ? +m[2] : null);
+    else if (REGION.orte.some(o => o.id === h)) await go("ort", h);
+    else await go("region");
+  } catch (e) {
+    $("#stage").innerHTML = `<div class="loading">Die Kartendaten konnten nicht geladen werden (${esc(e.message)}).</div>`;
+  }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state.view === "bereich" ? null : go(state.view, state.ortId, state.berNr));
+})();
+</script>

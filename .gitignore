@@ -1,0 +1,30 @@
+# --- Geheimnisse: niemals ins Repository ---
+# Echte Konfiguration mit Datenbank-Passwort, Installationsschlüssel und KI-Schlüssel
+config.php
+# Upload-Pakete enthalten Konfigurationen und alte Beispieldateien mit Zugangsdaten
+herbinum/upload/*.zip
+dev-testkonto.txt
+.env
+# Datenbank-Sicherungen (das Tabellenschema gehört dagegen ins Repository)
+*.sql
+!herbinum/spiel/app/schema.sql
+
+# --- Stand des Servers, nicht des Codes ---
+# Sperrdatei des Installers (sonst hält sich eine frische Installation für fertig)
+.installiert
+# Von Spielern und der Spielleitung hochgeladene Dateien
+herbinum/spiel/public/uploads/musik/*
+herbinum/spiel/public/uploads/wappen/*
+!herbinum/spiel/public/uploads/*/.gitkeep
+# Prüfdatei für die Domain
+herbinum/spiel/public/test.txt
+
+# --- Werkzeuge und Betriebssystem ---
+.claude/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+Thumbs.db
+desktop.ini
+.DS_Store

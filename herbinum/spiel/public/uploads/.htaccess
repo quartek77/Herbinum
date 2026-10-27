@@ -1,0 +1,16 @@
+# Hochgeladene Dateien: nur Audio und Bilder ausliefern, niemals Skripte ausführen
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi|sh|htm|html|js|svg)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>
+AddType audio/mpeg .mp3
+AddType audio/ogg .ogg
+AddType audio/mp4 .m4a
+AddType audio/wav .wav
+AddType image/png .png
+AddType image/jpeg .jpg
+AddType image/gif .gif
+AddType image/webp .webp
