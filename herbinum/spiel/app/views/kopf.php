@@ -62,7 +62,7 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
 
 <div class="hauptbereich">
 <header class="kopf">
-  <span class="tageszeit" title="Spieltag <?= (int)$zeit['tag'] ?>"><span class="sonne" aria-hidden="true"><?= $zeit['icon'] ?></span> <?= h($zeit['name']) ?> · <span class="uhr"><?= h($zeit['uhr']) ?></span></span>
+  <span class="tageszeit" title="Spieluhr: ein Tag dauert <?= h(str_replace('.', ',', (string)round(tageslaenge_s() / 3600, 1))) ?> Stunden"><span class="sonne" aria-hidden="true"><?= $zeit['icon'] ?></span> <?= h($zeit['name']) ?> · <span class="uhr" data-stunde="<?= round(spielstunde(time()), 4) ?>" data-faktor="<?= round(86400 / tageslaenge_s(), 4) ?>"><?= h($zeit['uhr']) ?></span> <small>Spielzeit</small></span>
   <?php if (count($bereiche) > 1): ?>
     <form method="get" class="bereichwahl">
       <input type="hidden" name="s" value="<?= h($seite) ?>">
@@ -134,15 +134,24 @@ $resIcon = ['holz' => 'holz', 'ziegel' => 'ziegel', 'korn' => 'korn', 'taler' =>
 </div>
 
 <?php
-$meinSchutz = vollschutz_bis(db(), (int)$spieler['id']);
 $meinVerlust = verlust_stand(db(), (int)$spieler['id'], time())['verlust'];
 $meinWiederaufbau = wiederaufbau_bis((int)$spieler['id']);
-if ($meinSchutz || $meinVerlust > 0.005 || $meinWiederaufbau > time()): ?>
+$meineBlauhelme = blauhelme_prozent(db(), $z['bereich']['id'], time());
+if ($meinVerlust > 0.005 || $meinWiederaufbau > time() || $meineBlauhelme > 0): ?>
   <div class="schutz-band" role="status"><span aria-hidden="true">🛡</span>
-    <span><?= $meinSchutz ? '<b>Tagesgrenze erreicht:</b> Bis ' . date('d.m. H:i', $meinSchutz) . ' Uhr kann dich niemand überfallen. Greifst du selbst jemanden an, darf dieser einmal zurückschlagen.'
-          : ($meinVerlust > 0.005 ? '<b>Verluste:</b> ' . round($meinVerlust * 100) . ' % deines Vermögens in den letzten ' . round(SCHUTZ_FENSTER_H / tempo()) . ' h – ab ' . round(VERLUST_MAX_TAG * 100) . ' % bist du für alle geschützt.' : '') ?>
+    <span><?= $meinVerlust >= VERLUST_MAX_TAG - 0.001 ? '<b>Tagesgrenze erreicht:</b> Wer dich jetzt überfällt, bekommt keine Beute mehr – und die Blauhelme stehen in voller Stärke bereit.'
+          : ($meinVerlust > 0.005 ? '<b>Verluste:</b> ' . round($meinVerlust * 100) . ' % deines Vermögens in den letzten ' . round(SCHUTZ_FENSTER_H / tempo()) . ' h – ab ' . round(VERLUST_MAX_TAG * 100) . ' % gibt es bei dir keine Beute mehr.' : '') ?>
+      <?= $meineBlauhelme > 0 ? ' <b>Blauhelme</b> schützen diesen Bereich (noch etwa ' . $meineBlauhelme . ' %).' : '' ?>
       <?= $meinWiederaufbau > time() ? ' <b>Wiederaufbauhilfe:</b> +' . round(WIEDERAUFBAU_BONUS * 100) . ' % Produktion bis ' . date('H:i', $meinWiederaufbau) . ' Uhr.' : '' ?></span></div>
 <?php endif ?>
+<?php foreach (bedrohungen((int)$spieler['id']) as $bz):
+    $wo = bereich_name(db(), $bz['ziel_id']); ?>
+  <a class="meldung fehler alarm" href="?s=zuege" role="alert">⚠ <?= match ($bz['phase']) {
+      'spaehen' => '<b>' . h($bz['absender']) . '</b> späht ' . h($wo) . ' aus – das Gefecht beginnt um ' . date('H:i', (int)$bz['ankunft_ts']) . ' Uhr. Jetzt Einheiten in den Bunker bringen oder verlegen.',
+      'gefecht' => 'Gefecht in ' . h($wo) . ' gegen <b>' . h($bz['absender']) . '</b> – Ausgang um ' . date('H:i', (int)$bz['ankunft_ts']) . ' Uhr.',
+      default => '<b>' . h($bz['absender']) . '</b> plündert ' . h($wo) . ' bis ' . date('H:i', (int)$bz['ankunft_ts']) . ' Uhr.',
+  } ?></a>
+<?php endforeach ?>
 <?php foreach ($wetterJetzt as ['e' => $e, 's' => $s]):
     $def = EREIGNISSE[$e['typ']];
     $wirk = [];

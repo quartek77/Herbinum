@@ -49,6 +49,11 @@ $wirkung = function (string $typ, int $stufe) use ($geplant, $b, $z): array {
         $fehlt = fehlende_voraussetzungen($g['braucht'], $z['stufen'], $z['fo']);
         $mangel = array_filter(RESSOURCEN, fn($r) => $b[$r] < $kosten[$r], ARRAY_FILTER_USE_KEY);
         $grund = $fehlt ? 'Braucht ' . implode(', ', $fehlt) : ($queueVoll ? 'Warteschlange voll' : ($landVoll ? 'Kein Bauland frei' : ($mangel ? 'Zu wenig ' . implode(', ', $mangel) : '')));
+        if (isset($g['max']) && $stufe > $g['max']) {
+            $grund = 'Höchste Stufe erreicht';
+        } elseif (!empty($g['einmalig']) && ($anderswo = gebaeude_anderswo(db(), (int)$spieler['id'], $typ, $b['id']))) {
+            $grund = 'Gibt es nur einmal – steht schon in ' . $anderswo;
+        }
         ?>
       <article class="gebaeude<?= $fehlt ? ' gesperrt' : '' ?>" id="g-<?= $typ ?>">
         <header>

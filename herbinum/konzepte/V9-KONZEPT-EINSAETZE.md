@@ -1,6 +1,12 @@
 # Konzept Version 9: Einsätze statt Sperren
 
-> **Stand: Konzept, noch nicht umgesetzt.** Baut auf Version 8 (Fairness) auf. Die offenen Fragen sind mit dem Spielleiter geklärt:
+> **Stand: umgesetzt in Version 9** (Zweig `v9/einsaetze`, Datenbankstruktur 8) mit den Werten dieses Konzepts. Abweichungen und Ergänzungen:
+> Raubzüge, die beim Update unterwegs sind, kämpfen wie bisher sofort bei Ankunft (aber ohne neue Sperre, mit Blauhelmen) ·
+> Einheiten, die rüsten, sind für andere Züge reserviert · der Spähbericht nennt die geschätzte Kampfkraft, der Erkundungsbericht die Blauhelme ·
+> Tag und Nacht laufen jetzt mit dem Spieltempo (24 h ÷ Tempo) · die Bereichsansicht ist modernisiert (Betonleitwände, Container, Stahl-Wachtürme, Betonmauer).
+> Datenmodell wie in G, mit der Spalte `zuege.kampf` (statt kampf_json) und Spitzenwert-Spalten in `blauhelme`.
+>
+> Ursprünglicher Stand: Baut auf Version 8 (Fairness) auf. Die offenen Fragen sind mit dem Spielleiter geklärt:
 > Sicherheitskraft zu Fuß mit 5 km/h · NPC-Anzahl in der Spielleitung einstellbar, Stärke wächst mit dem Mittelfeld ·
 > Warnung an den Verteidiger mit Namen des Angreifers · nach hohen Verlusten nur noch Blauhelme, kein Angriffsverbot.
 

@@ -353,3 +353,35 @@ CREATE TABLE IF NOT EXISTS spionage_log (
   sperre_bis  INT UNSIGNED NOT NULL,
   KEY ix_sp (spaeher_id, ziel_id, ts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+;
+
+-- ---------- Version 9 (Schema 8): Einsätze in Phasen, Blauhelme, NPC-Mitspieler ----------
+-- Dazu neue Spalten (install.php): zuege.phase, zuege.gruppe, zuege.kampf, spieler.ist_npc
+
+CREATE TABLE IF NOT EXISTS einsatzgruppen (
+  spieler_id    INT UNSIGNED NOT NULL,
+  gruppe        TINYINT UNSIGNED NOT NULL,
+  zug_id        INT UNSIGNED NULL,               -- belegt von Rüsten bis Rückkehr
+  bereit_ab_ts  INT UNSIGNED NOT NULL DEFAULT 0, -- danach Regeneration bis hier
+  PRIMARY KEY (spieler_id, gruppe)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blauhelme (
+  bereich_id  VARCHAR(40) PRIMARY KEY,
+  staerke     DOUBLE NOT NULL,                   -- Kampfkraft beim Eintreffen, nimmt bis bis_ts linear ab
+  ab_ts       INT UNSIGNED NOT NULL,
+  bis_ts      INT UNSIGNED NOT NULL,
+  spitze      DOUBLE NOT NULL DEFAULT 0,         -- stärkster Sieger im Zeitfenster (volle Blauhelme ab Tagesgrenze)
+  spitze_ts   INT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS npc (
+  spieler_id            INT UNSIGNED PRIMARY KEY,
+  typ                   VARCHAR(12) NOT NULL,    -- haendler, aufbauer, festung
+  ziel_anteil           DOUBLE NOT NULL,         -- Zielpunkte = Anteil × Median der aktiven Spieler
+  prod_faktor           DOUBLE NOT NULL DEFAULT 1,
+  faktor_ts             INT UNSIGNED NOT NULL DEFAULT 0,
+  naechster_schritt_ts  INT UNSIGNED NOT NULL DEFAULT 0,
+  letzter_schritt_ts    INT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT fk_npc_spieler FOREIGN KEY (spieler_id) REFERENCES spieler(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

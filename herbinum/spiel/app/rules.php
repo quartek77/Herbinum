@@ -63,6 +63,12 @@ const GEBAEUDE = [
         'name' => 'Bunker', 'kurz' => 'Gesicherte Tiefgarage. Eingelagerte Einheiten und Fahrzeuge sind vor Raubzügen und Erkundung sicher.',
         'kosten' => ['holz' => 600, 'ziegel' => 1500, 'taler' => 150], 'faktor' => 1.8, 'braucht' => ['hofstelle' => 3],
     ],
+    // max = höchste Stufe, einmalig = nur in einem Bereich je Spieler (Version 9)
+    'kommandozentrale' => [
+        'name' => 'Kommandozentrale', 'kurz' => 'Plant Raubzüge: Jede Stufe bringt eine weitere Einsatzgruppe – also einen weiteren Raubzug gleichzeitig. Nur in einem Bereich, höchstens Stufe 3.',
+        'kosten' => ['holz' => 8000, 'ziegel' => 16000, 'korn' => 4000, 'taler' => 2000], 'faktor' => 3.0, 'max' => 3, 'einmalig' => true,
+        'braucht' => ['hofstelle' => 6, 'dorfschule' => 5, 'schuetzenhalle' => 5, 'logistik' => 2, 'funktechnik' => 2, 'taktik' => 1],
+    ],
 ];
 
 const START_RESSOURCEN = ['holz' => 500, 'ziegel' => 500, 'korn' => 150, 'taler' => 0];
@@ -141,9 +147,9 @@ const FORSCHUNG = [
         'kosten' => ['holz' => 100, 'ziegel' => 100, 'korn' => 200], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 1]],
     'windkraft' => ['name' => 'Windkraft', 'kurz' => '+5 % Strom je Stufe.', 'bonus' => 0.05,
         'kosten' => ['holz' => 100, 'ziegel' => 400, 'taler' => 50], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 1]],
-    'mechanik' => ['name' => 'Fahrzeugtechnik', 'kurz' => 'Transporter und Siedlerkonvois fahren 10 % schneller je Stufe.', 'bonus' => 0.10,
+    'mechanik' => ['name' => 'Fahrzeugtechnik', 'kurz' => 'Transporter, Mannschaftstransporter und Siedlerkonvois fahren 10 % schneller je Stufe.', 'bonus' => 0.10,
         'kosten' => ['holz' => 400, 'korn' => 600], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 1, 'werkstatt' => 1]],
-    'paettkes' => ['name' => 'Radwegenetz', 'kurz' => 'E-Bike-Kuriere und Sicherheitskräfte fahren 10 % schneller je Stufe.', 'bonus' => 0.10,
+    'paettkes' => ['name' => 'Radwegenetz', 'kurz' => 'E-Bike-Kuriere fahren 10 % schneller je Stufe.', 'bonus' => 0.10,
         'kosten' => ['holz' => 300, 'ziegel' => 200, 'taler' => 50], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 1]],
     'dorftratsch' => ['name' => 'Informationsnetz', 'kurz' => 'Erkundungsberichte verraten mehr: erst Einheiten, dann Gebäude, dann Forschung.', 'bonus' => 0,
         'kosten' => ['holz' => 200, 'ziegel' => 1000, 'korn' => 200], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 3]],
@@ -161,6 +167,13 @@ const FORSCHUNG = [
         'kosten' => ['holz' => 500, 'ziegel' => 1000, 'taler' => 150], 'faktor' => 1.9, 'braucht' => ['dorfschule' => 2, 'scheune' => 2]],
     'abschirmung' => ['name' => 'Abschirmung', 'kurz' => 'Spionageabwehr: Fremde Kuriere werden öfter abgefangen und sehen weniger. Abgefangene Späher verraten ihren Auftraggeber.', 'bonus' => 0,
         'kosten' => ['holz' => 400, 'ziegel' => 800, 'taler' => 200], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 2, 'schuetzenhalle' => 1]],
+    // Version 9: Einsätze
+    'logistik' => ['name' => 'Logistik', 'kurz' => '+15 % Plätze im Mannschaftstransporter je Stufe.', 'bonus' => 0.15,
+        'kosten' => ['holz' => 1000, 'ziegel' => 1500, 'taler' => 300], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 3, 'werkstatt' => 4]],
+    'funktechnik' => ['name' => 'Funktechnik', 'kurz' => 'Rüsten und Spähen gehen 5 % schneller je Stufe (höchstens 25 %).', 'bonus' => 0.05,
+        'kosten' => ['holz' => 800, 'ziegel' => 2000, 'taler' => 400], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 4]],
+    'taktik' => ['name' => 'Taktik', 'kurz' => 'Die Regeneration nach einem Raubzug dauert 5 % kürzer je Stufe (höchstens 25 %).', 'bonus' => 0.05,
+        'kosten' => ['holz' => 1500, 'ziegel' => 1500, 'korn' => 1500, 'taler' => 500], 'faktor' => 2.0, 'braucht' => ['dorfschule' => 4, 'schiessausbildung' => 3]],
 ];
 
 function forschungskosten(string $typ, int $stufe): array
@@ -198,12 +211,15 @@ const EINHEITEN = [
     'trecker' => ['name' => 'Transporter', 'kurz' => 'Bringt Rohstoffe zu anderen Bereichen und fährt bei Raubzügen die Beute heim.',
         'kosten' => ['holz' => 2000, 'ziegel' => 2000], 'tempo' => 25, 'ladung' => 2500, 'korn_km' => 3, 'angriff' => 0, 'leben' => 300,
         'forschung' => 'mechanik', 'halle' => 'werkstatt', 'beweglich' => true, 'braucht' => ['werkstatt' => 2, 'mechanik' => 1]],
+    'mannschaftswagen' => ['name' => 'Mannschaftstransporter', 'kurz' => 'Bringt Sicherheitskräfte (1 Platz) und Einsatzteams (2 Plätze) schnell zum Ziel. 10 Plätze, mehr mit Logistik.',
+        'kosten' => ['holz' => 6000, 'ziegel' => 8000, 'korn' => 2000, 'taler' => 800], 'tempo' => 35, 'ladung' => 200, 'korn_km' => 4, 'angriff' => 0, 'leben' => 500,
+        'forschung' => 'mechanik', 'halle' => 'werkstatt', 'beweglich' => true, 'braucht' => ['werkstatt' => 5, 'mechanik' => 3, 'logistik' => 1]],
     'siedlertreck' => ['name' => 'Siedlerkonvoi', 'kurz' => 'Umzugskonvoi mit Pionieren. Gründet eine neue Zentrale in einem freien Bereich und bleibt dort.',
         'kosten' => ['holz' => 10000, 'ziegel' => 20000, 'korn' => 10000, 'taler' => 500], 'tempo' => 6, 'ladung' => 1000, 'korn_km' => 15, 'angriff' => 0, 'leben' => 600,
         'forschung' => 'mechanik', 'halle' => 'werkstatt', 'beweglich' => true, 'braucht' => ['werkstatt' => 3, 'mechanik' => 2]],
-    'schuetze' => ['name' => 'Sicherheitskraft', 'kurz' => 'Mit dem E-Scooter unterwegs. Günstig – für Raubzüge und zur Verteidigung.',
-        'kosten' => ['holz' => 200, 'ziegel' => 50, 'korn' => 150, 'taler' => 20], 'tempo' => 12, 'ladung' => 50, 'korn_km' => 0.2, 'angriff' => 10, 'leben' => 40,
-        'forschung' => 'paettkes', 'halle' => 'schuetzenhalle', 'beweglich' => true, 'braucht' => ['schuetzenhalle' => 1]],
+    'schuetze' => ['name' => 'Sicherheitskraft', 'kurz' => 'Zu Fuß unterwegs (5 km/h), schneller im Mannschaftstransporter. Günstig – für Raubzüge und zur Verteidigung.',
+        'kosten' => ['holz' => 200, 'ziegel' => 50, 'korn' => 150, 'taler' => 20], 'tempo' => 5, 'ladung' => 50, 'korn_km' => 0.2, 'angriff' => 10, 'leben' => 40,
+        'forschung' => null, 'halle' => 'schuetzenhalle', 'beweglich' => true, 'braucht' => ['schuetzenhalle' => 1]],
     'reiter' => ['name' => 'Einsatzteam', 'kurz' => 'Schnelle Eingreiftruppe im Geländewagen: stark, aber teuer im Unterhalt.',
         'kosten' => ['holz' => 800, 'ziegel' => 200, 'korn' => 1200, 'taler' => 150], 'tempo' => 22, 'ladung' => 150, 'korn_km' => 1.5, 'angriff' => 40, 'leben' => 150,
         'forschung' => null, 'halle' => 'schuetzenhalle', 'beweglich' => true, 'braucht' => ['schuetzenhalle' => 3, 'schiessausbildung' => 2]],
@@ -256,12 +272,39 @@ function strecke_km(array $von, array $nach): float
     return max(MIN_STRECKE_KM, $luft * UMWEG_FAKTOR);
 }
 
-/** Langsamste Einheit bestimmt das Tempo des Zuges (km/h). */
+/** Plätze je Mannschaftstransporter (mit Logistik). */
+function mw_plaetze(array $fo): float
+{
+    return MW_PLAETZE * (1 + FORSCHUNG['logistik']['bonus'] * (int)($fo['logistik'] ?? 0));
+}
+
+/**
+ * Wer fährt im Mannschaftstransporter mit? Sicherheitskräfte und Einsatzteams steigen ein, solange Plätze frei sind –
+ * die langsamsten zuerst. Gibt ['typ' => Anzahl im Transporter] zurück.
+ */
+function zug_sitzplaetze(array $einheiten, array $fo): array
+{
+    $frei = (int)floor((int)($einheiten['mannschaftswagen'] ?? 0) * mw_plaetze($fo));
+    $typen = array_keys(array_intersect_key(PLATZBEDARF, array_filter($einheiten)));
+    usort($typen, fn($a, $b) => einheit_kmh($a, $fo) <=> einheit_kmh($b, $fo));
+    $sitzen = [];
+    foreach ($typen as $t) {
+        $n = min((int)$einheiten[$t], intdiv($frei, PLATZBEDARF[$t]));
+        if ($n > 0) {
+            $sitzen[$t] = $n;
+            $frei -= $n * PLATZBEDARF[$t];
+        }
+    }
+    return $sitzen;
+}
+
+/** Die langsamste Einheit bestimmt das Tempo des Zuges (km/h) – wer im Mannschaftstransporter sitzt, zählt nicht. */
 function zug_tempo(array $einheiten, array $fo): float
 {
+    $sitzen = zug_sitzplaetze($einheiten, $fo);
     $v = INF;
     foreach ($einheiten as $typ => $n) {
-        if ($n > 0) {
+        if ($n > ($sitzen[$typ] ?? 0)) {
             $v = min($v, einheit_kmh($typ, $fo));
         }
     }
@@ -336,7 +379,7 @@ function max_angebote(array $fo): int
 // ---------------------------------------------------------------------------
 // Bunker
 // ---------------------------------------------------------------------------
-const BUNKER_PLATZ = ['fahrradkurier' => 1, 'schuetze' => 1, 'reiter' => 2, 'trecker' => 4, 'siedlertreck' => 6];
+const BUNKER_PLATZ = ['fahrradkurier' => 1, 'schuetze' => 1, 'reiter' => 2, 'trecker' => 4, 'mannschaftswagen' => 5, 'siedlertreck' => 6];
 const BUNKER_PLAETZE_JE_STUFE = 15;
 const BUNKER_AUSLAGERN_STUNDEN = 4.0;      // so lange dauert das Auslagern bei Bunker Stufe 1 ohne Forschung
 const BUNKER_AUSLAGERN_FAKTOR = 0.9;       // je weitere Bunkerstufe und je Stufe Bunkerbau 10 % schneller
@@ -516,4 +559,93 @@ function spanne(float $wert, float $genau, float $u): array
     $von = max(0.0, $wert - $u * $breite);
     $runden = $wert >= 10000 ? 500 : ($wert >= 1000 ? 100 : 10);
     return [(int)(floor($von / $runden) * $runden), (int)(ceil(($von + $breite) / $runden) * $runden)];
+}
+
+// ---------------------------------------------------------------------------
+// Einsätze (Version 9): Raubzüge in Phasen, Einsatzgruppen, Blauhelme.
+// Zeiten gelten bei Tempo 1 und werden durch das Spieltempo geteilt. Konzept: konzepte/V9-KONZEPT-EINSAETZE.md
+// ---------------------------------------------------------------------------
+const PLATZBEDARF = ['schuetze' => 1, 'reiter' => 2];   // Plätze im Mannschaftstransporter
+const MW_PLAETZE = 10;
+const RUESTEN_MIN = 30.0;              // Rüsten: 30 Minuten …
+const RUESTEN_JE_20_MIN = 2.0;         // … plus 2 Minuten je 20 Einheiten …
+const RUESTEN_MAX_MIN = 120.0;         // … höchstens 2 Stunden
+const SPAEHEN_MIN = 20.0;              // Spähen; bis zum Ende ist ein Rückzug möglich
+const GEFECHT_MIN = 60.0;              // Gefecht bei gleicher Kampfkraft; × 2 / (1 + q) …
+const GEFECHT_MIN_MIN = 20.0;          // … mindestens …
+const GEFECHT_MAX_MIN = 120.0;         // … und höchstens
+const PLUENDERN_MIN = 10.0;            // Plündern: 10 Minuten …
+const PLUENDERN_JE_2000_MIN = 2.0;     // … plus 2 Minuten je 2.000 Rohstoffe …
+const PLUENDERN_MAX_MIN = 60.0;        // … höchstens 1 Stunde
+const REGENERATION_H = 4.0;            // Regeneration nach der Rückkehr …
+const REGENERATION_JE_GEFALLENE_MIN = 2.0; // … plus 2 Minuten je gefallener Einheit …
+const REGENERATION_MAX_H = 8.0;        // … höchstens 8 Stunden
+const REGENERATION_ABBRUCH = 0.5;      // abgebrochene oder umgekehrte Raubzüge: halbe Regeneration
+const REGENERATION_OHNE_WARTUNG = 1.5; // fehlt Geld oder Nahrung für die Wartung, dauert sie länger
+const WARTUNG_ANTEIL = 0.02;           // Wartung: 2 % des Einheitenwerts, halb Euro, halb Nahrung
+const ZEITBONUS_MAX = 0.25;            // Funktechnik und Taktik verkürzen höchstens um 25 %
+const KOMMANDO_MAX_STUFE = 3;          // 1 + 3 = höchstens 4 Einsatzgruppen
+const BLAUHELM_ANTEIL = 0.60;          // nach einer Niederlage: Schutztruppe mit 60 % der Kampfkraft des Siegers …
+const BLAUHELM_H = 6.0;                // … die in 6 Stunden auf null abnimmt
+const BLAUHELM = ['name' => 'Blauhelme', 'angriff' => 30, 'leben' => 150];   // virtuelle Einheit, fällt nicht dauerhaft
+
+/** Werte einer Einheit für den Kampf – auch für Blauhelme, die nicht in EINHEITEN stehen. */
+function einheit_def(string $typ): array
+{
+    return EINHEITEN[$typ] ?? ($typ === 'blauhelm' ? BLAUHELM : ['name' => $typ, 'angriff' => 0, 'leben' => 1]);
+}
+
+/** Kampfkraft eines Blauhelms ohne Boni. */
+function blauhelm_k(): float
+{
+    return BLAUHELM['angriff'] + BLAUHELM['leben'] / 4;
+}
+
+/** Faktor für Funktechnik (Rüsten, Spähen) bzw. Taktik (Regeneration): 1 − 5 % je Stufe, höchstens − 25 %. */
+function zeitbonus(array $fo, string $forschung): float
+{
+    return 1 - min(ZEITBONUS_MAX, FORSCHUNG[$forschung]['bonus'] * (int)($fo[$forschung] ?? 0));
+}
+
+function minuten_s(float $minuten, float $tempo): int
+{
+    return max(10, (int)round($minuten * 60 / $tempo));
+}
+
+function ruestzeit_s(int $einheiten, array $fo, float $tempo): int
+{
+    return minuten_s(min(RUESTEN_MAX_MIN, RUESTEN_MIN + RUESTEN_JE_20_MIN * intdiv(max(0, $einheiten), 20)) * zeitbonus($fo, 'funktechnik'), $tempo);
+}
+
+function spaehzeit_s(array $fo, float $tempo): int
+{
+    return minuten_s(SPAEHEN_MIN * zeitbonus($fo, 'funktechnik'), $tempo);
+}
+
+/** Gefechtsdauer aus q = Kampfkraft Angreifer ÷ Kampfkraft Verteidiger: überlegene Angreifer sind schneller fertig. */
+function gefechtszeit_s(float $q, float $tempo): int
+{
+    return minuten_s(max(GEFECHT_MIN_MIN, min(GEFECHT_MAX_MIN, GEFECHT_MIN * 2 / (1 + max(0.0, $q)))), $tempo);
+}
+
+function pluenderzeit_s(float $menge, float $tempo): int
+{
+    return minuten_s(min(PLUENDERN_MAX_MIN, PLUENDERN_MIN + PLUENDERN_JE_2000_MIN * max(0.0, $menge) / 2000), $tempo);
+}
+
+function regenerationszeit_s(int $gefallen, array $fo, float $tempo): int
+{
+    $h = min(REGENERATION_MAX_H, REGENERATION_H + REGENERATION_JE_GEFALLENE_MIN * max(0, $gefallen) / 60);
+    return (int)round($h * 3600 * zeitbonus($fo, 'taktik') / $tempo);
+}
+
+/** Wartung nach der Rückkehr: Tanken, Munition, Reparaturen. */
+function wartungskosten(array $einheiten): array
+{
+    $w = 0.0;
+    foreach ($einheiten as $typ => $n) {
+        $w += einheit_wert($typ) * (int)$n;
+    }
+    $w *= WARTUNG_ANTEIL;
+    return ['holz' => 0, 'ziegel' => 0, 'korn' => (int)ceil($w / 2 / MARKT_WERT['korn']), 'taler' => (int)ceil($w / 2 / MARKT_WERT['taler'])];
 }

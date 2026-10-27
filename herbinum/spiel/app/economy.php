@@ -245,6 +245,17 @@ function fehlende_voraussetzungen(array $braucht, array $stufen, array $fo = [])
     return $fehlt;
 }
 
+/** Name eines anderen Bereichs des Spielers, in dem $typ schon steht oder gebaut wird – oder null. */
+function gebaeude_anderswo(PDO $db, int $sid, string $typ, string $ausser): ?string
+{
+    $st = $db->prepare("SELECT b.name FROM bereiche b WHERE b.besitzer_id = ? AND b.id <> ? AND (
+                          EXISTS (SELECT 1 FROM gebaeude g WHERE g.bereich_id = b.id AND g.typ = ? AND g.stufe > 0)
+                          OR EXISTS (SELECT 1 FROM bauauftraege a WHERE a.bereich_id = b.id AND a.typ = ?)) LIMIT 1");
+    $st->execute([$sid, $ausser, $typ, $typ]);
+    $n = $st->fetchColumn();
+    return $n === false ? null : (string)$n;
+}
+
 /** Bauauftrag anlegen. Gibt null bei Erfolg zurück, sonst eine Fehlermeldung für den Spieler. */
 function bau_starten(string $bid, int $spielerId, string $typ): ?string
 {
@@ -268,6 +279,10 @@ function bau_starten(string $bid, int $spielerId, string $typ): ?string
             $fehler = 'Kein Bauland mehr frei.';
         } elseif ($f = fehlende_voraussetzungen(GEBAEUDE[$typ]['braucht'], $z['stufen'], $z['fo'])) {
             $fehler = 'Dafür brauchst du zuerst: ' . implode(', ', $f) . '.';
+        } elseif (isset(GEBAEUDE[$typ]['max']) && $stufe > GEBAEUDE[$typ]['max']) {
+            $fehler = GEBAEUDE[$typ]['name'] . ' hat schon die höchste Stufe.';
+        } elseif (!empty(GEBAEUDE[$typ]['einmalig']) && ($anderer = gebaeude_anderswo($db, $spielerId, $typ, $bid))) {
+            $fehler = GEBAEUDE[$typ]['name'] . ' gibt es nur einmal – du hast sie schon in ' . $anderer . '.';
         } else {
             foreach ($kosten as $r => $k) {
                 if ($b[$r] < $k) {

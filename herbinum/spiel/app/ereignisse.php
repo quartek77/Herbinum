@@ -31,10 +31,17 @@ function spieltag_beginn(int $tag): int
     return $lokal - (int)date('Z', $lokal);
 }
 
-/** Uhrzeit im Spieltag als Stunde 0–24 (bei 24-Stunden-Tagen die echte Uhrzeit). */
+/** Dauer eines Tag-Nacht-Wechsels: 24 Stunden ÷ Spieltempo (bei Tempo 2 also 12 Stunden), einstellbar über spiel.tageslaenge_stunden. */
+function tageslaenge_s(): int
+{
+    $h = config()['spiel']['tageslaenge_stunden'] ?? 24 / max(0.1, tempo());
+    return max(3600, (int)round((float)$h * 3600));
+}
+
+/** Uhrzeit im Spiel als Stunde 0–24. Die Spieluhr läuft so schnell wie das Spiel; Zeitung und Wetter bleiben beim Spieltag. */
 function spielstunde(int $ts): float
 {
-    return (ortszeit($ts) % spieltag_s()) / spieltag_s() * 24;
+    return (ortszeit($ts) % tageslaenge_s()) / tageslaenge_s() * 24;
 }
 
 function ist_nacht(int $ts): bool
@@ -326,8 +333,10 @@ function welt_aktualisieren(int $jetzt): void
         markt_aufraeumen($jetzt);
         db()->prepare('DELETE FROM chat WHERE ts < ?')->execute([$jetzt - 30 * 86400]);
         db()->prepare('DELETE FROM chronik WHERE ts < ?')->execute([$jetzt - 30 * 86400]);
+        npc_abgleichen($jetzt);
     }
     ereignisse_anwenden($jetzt);
+    npc_takt($jetzt);
 }
 
 // =====================================================================

@@ -199,9 +199,10 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
         if (!$ziel) {
             return 'Diesen Zielbereich gibt es nicht.';
         }
+        $reserviert = reservierte_einheiten($db, $startId);
         foreach ($einheiten as $typ => $n) {
-            if (($z['einheiten'][$typ] ?? 0) < $n) {
-                return 'Hier stehen nicht genug Einheiten vom Typ „' . EINHEITEN[$typ]['name'] . '“ bereit.';
+            if (($z['einheiten'][$typ] ?? 0) - ($reserviert[$typ] ?? 0) < $n) {
+                return 'Hier stehen nicht genug Einheiten vom Typ „' . EINHEITEN[$typ]['name'] . '“ bereit' . (($reserviert[$typ] ?? 0) ? ' – ' . $reserviert[$typ] . ' rüsten gerade für einen Raubzug.' : '.');
             }
         }
         $zielBesitzer = $ziel['besitzer_id'] === null ? null : (int)$ziel['besitzer_id'];
@@ -261,6 +262,13 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                 if (is_string($erlaubt)) {
                     return $erlaubt;
                 }
+                // Version 9: Jeder Raubzug braucht eine freie Einsatzgruppe
+                $gruppe = freie_einsatzgruppe($db, $sid, $jetzt);
+                if ($gruppe === null) {
+                    $ab = naechste_einsatzgruppe_ab($db, $sid, $jetzt);
+                    return 'Keine Einsatzgruppe frei' . ($ab ? ' – die nächste ist ab ' . date('d.m. H:i', $ab) . ' Uhr wieder einsatzbereit.' : ' – alle sind gerade im Einsatz.')
+                        . ' Mehr Gruppen gleichzeitig erlaubt die Kommandozentrale.';
+                }
                 break;
             case 'kolonisieren':
                 if (empty($einheiten['siedlertreck'])) {
@@ -287,6 +295,13 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
         if ($f = kosten_pruefen($b, $bedarf)) {
             return $f . ($verbrauch ? ' (Die Fahrt kostet ' . zahl($verbrauch) . ' Nahrung.)' : '') . ($einsatz ? ' (Die Erkundung kostet ' . zahl($einsatz) . ' Euro Einsatzgeld.)' : '');
         }
+        if ($auftrag === 'angriff') {
+            // Raubzüge beginnen mit dem Rüsten; die Truppen verlassen den Bereich erst beim Ausrücken
+            kosten_abziehen($db, $startId, $bedarf);
+            einsatz_anlegen($db, $sid, $startId, $zielId, $einheiten, $z['fo'], $gruppe, $verbrauch, $jetzt);
+            gegenschlag_freigeben($db, $sid, $zielBesitzer);     // wer angreift, darf vom Ziel einmal zurückbekommen
+            return null;
+        }
         // Bei Sturm, Hochwasser und Co. am Start dauert die Fahrt länger
         $dauer = (int)round(reisezeit($km, zug_tempo($einheiten, $z['fo']), tempo()) * ereignis_zugfaktor($b, $jetzt));
         kosten_abziehen($db, $startId, $bedarf);
@@ -297,9 +312,6 @@ function zug_starten(string $startId, int $sid, string $zielId, string $auftrag,
                       VALUES (?, ?, ?, ?, 'hin', ?, ?, ?, ?, ?, ?, ?, ?)")
            ->execute([$sid, $startId, $zielId, $auftrag, $jetzt, $jetzt + $dauer, $jetzt + 2 * $dauer, json_encode($einheiten),
                       $ladung['holz'], $ladung['ziegel'], $ladung['korn'], $ladung['taler']]);
-        if ($auftrag === 'angriff') {
-            gegenschlag_freigeben($db, $sid, $zielBesitzer);     // wer angreift, darf vom Ziel einmal zurückbekommen
-        }
         return null;
     });
 }
@@ -313,6 +325,9 @@ function zug_zurueckrufen(int $sid, int $zugId): ?string
         $jetzt = time();
         if (!$zug || (int)$zug['spieler_id'] !== $sid || $zug['status'] !== 'hin' || (int)$zug['ankunft_ts'] <= $jetzt) {
             return 'Dieser Zug kann nicht mehr umkehren.';
+        }
+        if (($zug['phase'] ?? '') !== '') {
+            return einsatz_abbrechen($db, $zug, $jetzt);
         }
         $db->prepare("UPDATE zuege SET status = 'zurueck', ankunft_ts = ?, rueckkehr_ts = ? WHERE id = ?")
            ->execute([$jetzt, $jetzt + ($jetzt - (int)$zug['abflug_ts']), $zugId]);
@@ -331,7 +346,7 @@ function zuege_des_spielers(int $sid): array
 function ankommende_zuege(int $sid): array
 {
     $st = db()->prepare("SELECT z.*, s.name AS absender FROM zuege z JOIN bereiche b ON b.id = z.ziel_id JOIN spieler s ON s.id = z.spieler_id
-                         WHERE b.besitzer_id = ? AND z.spieler_id <> ? AND z.status = 'hin' ORDER BY z.ankunft_ts");
+                         WHERE b.besitzer_id = ? AND z.spieler_id <> ? AND z.status = 'hin' AND z.phase <> 'ruesten' ORDER BY z.ankunft_ts");
     $st->execute([$sid, $sid]);
     return $st->fetchAll();
 }
@@ -358,8 +373,8 @@ function ereignisse_abarbeiten(int $jetzt): void
         });
     }
 
-    // Mehrere Runden: eine Ankunft kann eine ebenfalls schon fällige Rückkehr auslösen
-    for ($runde = 0; $runde < 5; $runde++) {
+    // Mehrere Runden: eine Ankunft kann eine ebenfalls schon fällige Rückkehr auslösen, ein Raubzug mehrere Phasen nachholen
+    for ($runde = 0; $runde < 12; $runde++) {
         $faellig = $db->query("SELECT id FROM zuege WHERE (status = 'hin' AND ankunft_ts <= {$jetzt}) OR (status = 'zurueck' AND rueckkehr_ts <= {$jetzt})
                                ORDER BY IF(status = 'hin', ankunft_ts, rueckkehr_ts), id LIMIT 100")->fetchAll(PDO::FETCH_COLUMN);
         if (!$faellig) {
@@ -402,6 +417,10 @@ function zug_umkehren(PDO $db, array $zug, bool $ladungAbgegeben): void
 
 function zug_ankunft(PDO $db, array $zug): void
 {
+    if (($zug['phase'] ?? '') !== '') {
+        einsatz_weiter($db, $zug);
+        return;
+    }
     $ts = (int)$zug['ankunft_ts'];
     $sid = (int)$zug['spieler_id'];
     $zielName = bereich_name($db, $zug['ziel_id']);
@@ -501,6 +520,7 @@ function zug_rueckkehr(PDO $db, array $zug): void
     if ((int)$start['bereich']['besitzer_id'] !== (int)$zug['spieler_id']) {
         // Startbereich gehört nicht mehr dem Spieler – Zug geht verloren (später: Kämpfe)
         $db->prepare('DELETE FROM zuege WHERE id = ?')->execute([$zug['id']]);
+        einsatzgruppe_freigeben($db, (int)$zug['spieler_id'], (int)($zug['gruppe'] ?? 0), (int)$zug['rueckkehr_ts']);
         return;
     }
     kosten_abziehen($db, $zug['start_id'], ['holz' => (float)$zug['holz'], 'ziegel' => (float)$zug['ziegel'], 'korn' => (float)$zug['korn'], 'taler' => (float)$zug['taler']], +1);
@@ -508,6 +528,9 @@ function zug_rueckkehr(PDO $db, array $zug): void
         einheiten_aendern($db, $zug['start_id'], $typ, $n);
     }
     $db->prepare('DELETE FROM zuege WHERE id = ?')->execute([$zug['id']]);
+    if (($zug['phase'] ?? '') !== '') {
+        einsatz_heimkehr($db, $zug, $start);
+    }
 }
 
 /** Angriffs- und Abwehrwert einer Erkundung. */
@@ -561,7 +584,7 @@ function erkundungsbericht(PDO $db, array $zug, array $ziel, ?float $vorsprung =
     if ($vorsprung >= 3) {
         $r['forschung'] = $fremdeFo;
         $r['bunker_belegt'] = bunker_belegt($ziel['bunker']) > 0;
-        $r['vollschutz_bis'] = vollschutz_bis($db, (int)$b['besitzer_id']);
+        $r['blauhelme'] = blauhelme_anzahl(blauhelme_kraft($db, $b['id'], (int)$b['besitzer_id'], time()));
         $r['spielraum'] = round(verlust_stand($db, (int)$b['besitzer_id'], time())['spielraum'], 3);
     }
     return $r;
@@ -662,20 +685,20 @@ function kampf(array $a, array $v, array $aFo, array $vFo, int $graben, int $weh
     $staerke = function (array $seite, float $f): float {
         $s = 0.0;
         foreach ($seite as $t => $n) {
-            $s += $n * EINHEITEN[$t]['angriff'] * $f;
+            $s += $n * einheit_def($t)['angriff'] * $f;
         }
         return $s;
     };
     $treffen = function (array $seite, float $hpF, float $schaden): array {
         $gesamt = 0.0;
         foreach ($seite as $t => $n) {
-            $gesamt += $n * EINHEITEN[$t]['leben'] * $hpF;
+            $gesamt += $n * einheit_def($t)['leben'] * $hpF;
         }
         if ($gesamt <= 0) {
             return $seite;
         }
         foreach ($seite as $t => $n) {
-            $hp = EINHEITEN[$t]['leben'] * $hpF;
+            $hp = einheit_def($t)['leben'] * $hpF;
             $seite[$t] = max(0.0, $n - $schaden * ($n * $hp / $gesamt) / $hp);
         }
         return $seite;
@@ -722,13 +745,17 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
     $nacht = ist_nacht($ts);
     $foV = forschung_laden($db, $verteidiger);
     $wertVorher = vermoegen($db, $verteidiger, $ts);
-    $ergebnis = kampf(zug_einheiten($zug), $ziel['einheiten'], forschung_laden($db, $sid), $foV,
-                      (int)($ziel['stufen']['graben'] ?? 0), (int)$zb['wehr'], null, $nacht);
+    $foA = forschung_laden($db, $sid);
+    $vert = einsatz_verteidiger($db, $sid, $ziel, $verteidiger, $ts);
+    $ergebnis = kampf(zug_einheiten($zug), $vert, $foA, $foV, (int)($ziel['stufen']['graben'] ?? 0), (int)$zb['wehr'], null, $nacht);
 
     // Verteidiger: Verluste abziehen, Anlagen wachsen teilweise nach
     $nachgewachsen = [];
     $verlust = 0.0;
     foreach ($ergebnis['v'] as $typ => [$vor, $nach]) {
+        if (!isset(EINHEITEN[$typ])) {
+            continue;   // Blauhelme fallen nicht
+        }
         $neu = $nach;
         if (!EINHEITEN[$typ]['beweglich'] && $vor > $nach) {
             $nachgewachsen[$typ] = (int)round(($vor - $nach) * WIEDERAUFBAU_ANTEIL);
@@ -755,6 +782,7 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
         kosten_abziehen($db, $zb['id'], $beute);
         $verlust += rohstoff_wert($beute);
         wiederaufbau_setzen($db, $verteidiger, $ts);
+        blauhelme_setzen($db, $zb['id'], $ts, kampfkraft(zug_einheiten($zug), $foA, false));
     }
     $schutz = schutz_nach_raubzug($db, $sid, $verteidiger, $ts, $ergebnis['sieger'], $wertVorher, $verlust);
     if ($ueberlebende) {
@@ -771,8 +799,8 @@ function raubzug_ausfuehren(PDO $db, array $zug, array $ziel, string $zielName, 
                             'beute' => $beute, 'nachgewachsen' => $nachgewachsen, 'graben' => (int)($ziel['stufen']['graben'] ?? 0), 'wehr' => (int)$zb['wehr'],
                             'nacht' => $nacht, 'beutefaktor' => round($beutefaktor, 2), 'tresor' => array_map('floor', $tresor),
                             'schaden' => round($schutz['anteil'], 3), 'schaden_24' => round($schutz['anteil_24'], 3), 'spielraum' => round($schutz['spielraum'], 3),
-                            'sperre_bis' => $schutz['sperre_bis'], 'vollschutz_bis' => $schutz['vollschutz_bis'], 'gekappt' => $gekappt,
-                            'wiederaufbau' => $ergebnis['sieger'] === 'angreifer'];
+                            'sperre_bis' => $schutz['sperre_bis'], 'gekappt' => $gekappt, 'blauhelme' => (int)($vert['blauhelm'] ?? 0),
+                            'wiederaufbau' => $ergebnis['sieger'] === 'angreifer', 'blauhelme_neu' => $ergebnis['sieger'] === 'angreifer'];
     chronik('raubzug', ort_von_bereich($db, $zb['id']), $ergebnis['sieger'], $ts);
     $ausgang = ['angreifer' => 'gewonnen', 'verteidiger' => 'verloren', 'unentschieden' => 'unentschieden'][$ergebnis['sieger']];
     nachricht($db, $sid, $ts, 'kampf', "Raubzug auf {$zielName}: {$ausgang}", $bericht + ['seite' => 'angreifer']);

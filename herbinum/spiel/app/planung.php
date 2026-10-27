@@ -104,6 +104,10 @@ function einsatz_bedarf(string $typ, array $z, int $sid): array
         case 'trecker':
             $h[] = ['text' => 'Verbraucht ' . EINHEITEN['trecker']['korn_km'] . ' ' . RESSOURCEN['korn'] . ' pro km, bei Transporten für Hin- und Rückweg.', 'ok' => null];
             break;
+        case 'mannschaftswagen':
+            $h[] = ['text' => 'Fasst ' . zahl(mw_plaetze($fo)) . ' Plätze (Sicherheitskraft 1, Einsatzteam 2) und fährt ' . zahl(einheit_kmh('mannschaftswagen', $fo))
+                . ' km/h. Wer keinen Platz findet, läuft – dann bestimmt er das Tempo. Mehr Plätze bringt Logistik, mehr Tempo Fahrzeugtechnik.', 'ok' => null];
+            break;
         case 'fahrradkurier':
             $h[] = ['text' => 'Erkundet fremde Bereiche. Jede Erkundung eines Spielers kostet ' . zahl(spionage_kosten((int)($fo['dorftratsch'] ?? 0)))
                 . ' Euro Einsatzgeld; denselben Spieler nur alle ' . dauer((int)round(SPIONAGE_SPERRE_H * 3600 / tempo())) . '.', 'ok' => null];
@@ -117,7 +121,15 @@ function einsatz_bedarf(string $typ, array $z, int $sid): array
             } else {
                 $h[] = ['text' => 'Für Raubzüge gegen andere Spieler und zur Verteidigung. Gegen Mitglieder der eigenen Allianz gibt es keine Raubzüge.', 'ok' => true];
             }
-            $h[] = ['text' => 'Nach einem Überfall bist du für dieses Opfer eine Zeit lang gesperrt; mehr als ' . round(VERLUST_MAX_ANGRIFF * 100) . ' % je Angriff verliert niemand. '
+            $gruppen = einsatzgruppen($db, $sid);
+            $frei = count(array_filter($gruppen, fn($x) => $x['frei']));
+            $h[] = ['text' => "Einsatzgruppen: {$frei} von " . count($gruppen) . ' bereit. Jeder Raubzug belegt eine Gruppe vom Rüsten bis zum Ende der Regeneration ('
+                . dauer(regenerationszeit_s(0, $fo, tempo())) . ' und mehr); weitere Gruppen bringt die Kommandozentrale.', 'ok' => $frei > 0];
+            if ($typ === 'schuetze') {
+                $h[] = ['text' => 'Läuft zu Fuß (' . EINHEITEN['schuetze']['tempo'] . ' km/h). Im Mannschaftstransporter (' . zahl(mw_plaetze($fo)) . ' Plätze) geht es mit '
+                    . zahl(einheit_kmh('mannschaftswagen', $fo)) . ' km/h zum Ziel.', 'ok' => null];
+            }
+            $h[] = ['text' => 'Mehr als ' . round(VERLUST_MAX_ANGRIFF * 100) . ' % je Angriff verliert niemand; wer verliert, bekommt Blauhelme. '
                 . 'Gegen deutlich Schwächere gibt es weniger oder keine Beute, und ein Teil der Vorräte liegt immer im Tresor.', 'ok' => null];
             break;
         case 'wallhecke':

@@ -134,7 +134,7 @@ Genossenschaften heißen jetzt **Allianzen** (nur im Spiel – Tabellen und Funk
 | **Spielerhandel** | Markt → Schwarzes Brett | ab Handelskunde 2; Angebote an alle oder nur an die Allianz; Gegenwert 50–200 % des Grundwerts (kein Verschenken); Gebühr 10 %, unter Allianzmitgliedern 2 %; Ware wird beim Einstellen einbehalten und kommt bei Rückzug oder nach 3 Tagen zurück |
 | **Bunker** | Gebäude (braucht Zentrale 3), Seite „Bunker“ | 15 Plätze je Stufe (+25 % je Stufe Bunkerbau); Kurier und Sicherheitskraft 1 Platz, Einsatzteams 2, Transporter 4, Siedlerkonvoi 6; Einlagern sofort, Auslagern dauert 4 h ÷ Tempo (−10 % je Bunker- und Bunkerbaustufe, mindestens 15 min); eingelagerte Einheiten kämpfen nicht, werden nicht erkundet und zählen weiter für die Rangliste |
 | **Vertretung** | Vertretung | festes Zeitfenster (Wochentage, Uhrzeit, höchstens 14 h, auch über Mitternacht); Änderungen gelten nach 2 Stunden; im Fenster steuert man selbst nicht, Allianzmitglieder dürfen die freigegebenen Dinge (bauen, forschen, Einheiten, Transporte/Verlegen zwischen den eigenen Bereichen, Bunker, Händler); nie Raubzüge, Erkundung, Besiedlung, Spielerhandel, Nachrichten, Allianz- oder Admin-Dinge; jede Aktion wird dem Vertretenen gemeldet; „Ich bin wieder da“ beendet das Fenster vorzeitig |
-| **Tag und Nacht** | Kopfzeile, Übersicht | Spieltag = `spieltag_stunden` (Standard 24, beginnt um Mitternacht); nachts (21–6 Uhr) +10 % Leben für Verteidiger (Nachtwache), Bereichsansicht dunkler |
+| **Tag und Nacht** | Kopfzeile, Übersicht | Die Spieluhr läuft mit dem Spieltempo: ein Tag-Nacht-Wechsel dauert 24 h ÷ `tempo` (bei Tempo 2 also 12 h, änderbar mit `tageslaenge_stunden`); nachts (21–6 Uhr Spielzeit) +10 % Leben für Verteidiger (Nachtwache), Bereichsansicht dunkler, Wachtürme mit Lichtkegel. Zeitung und Wetter folgen weiter dem Spieltag (`spieltag_stunden`, Standard 24) |
 | **Zufallsereignisse** | Nachrichten, Banner, Spielleitung | Sturm, Frost, Starkregen/Hochwasser, Hagel, Wirtschaftskrise, Zombie-Horde, Erdbeben; im Schnitt an jedem 4.–5. Spieltag (`ereignis_haeufigkeit`); ein Mittelpunkt mit Radius, Stärke je Bereich verschieden; einmalige Vorratsverluste von wenigen Prozent und zeitweise Produktionsänderungen; Züge langsamer; Zombies töten ungeschützte Einheiten (Sicherheitskräfte und Wachtürme schützen); Erdbeben verzögert Baustellen; Spielleitung kann auslösen, streichen und abschalten |
 | **Herbinum News** | Zeitung | eine Ausgabe je Spieltag: Wetter und 4-Tage-Vorhersage (aus den geplanten Ereignissen, je weiter weg desto unsicherer, mit Fehlalarmen), Lokales vom Vortag ohne Spielernamen bei Kämpfen, Blick in den öffentlichen Chat; mit `ki.api_key` schreibt die KI den Text, sonst erscheinen Kurzmeldungen |
 | **Wappen** | Allianz (Vorstand) | PNG, JPG, GIF, WebP bis 1 MB; wird mit GD neu gezeichnet und auf 256 px verkleinert; liegt in `public/uploads/wappen/` |
@@ -195,6 +195,27 @@ Hinweis: Weil der Kurier teurer ist, steigen die Punkte für bereits vorhandene 
 Die Kosten der Forschung Informationsnetz sind bewusst **nicht** erhöht worden, damit sich die Punkte für bereits erforschte Stufen nicht
 rückwirkend ändern – die Erkundung wird stattdessen über Kurierpreis und Einsatzgeld teurer.
 
+## Version 9: Einsätze in Phasen, Blauhelme, NPC-Mitspieler
+
+Offensive Spieler werden nicht mehr durch Verbote gebremst, sondern durch Zeit, Aufwand und Gegenwehr. Konzept mit allen Werten:
+`../konzepte/V9-KONZEPT-EINSAETZE.md`, Werte in `app/rules.php` (Abschnitt „Einsätze“), Logik in `app/einsaetze.php` und `app/npc.php`.
+
+| Was | Wo | Wie |
+|---|---|---|
+| **Raubzug in Phasen** | Züge | Rüsten (30 Min. + 2 Min. je 20 Einheiten, Truppen bleiben so lange im Bereich und verteidigen mit, Absagen kostenlos) → Anmarsch → Spähen (20 Min., Rückzug möglich, Verteidiger wird mit Namen gewarnt) → Gefecht (60 Min. × 2 ÷ (1 + q), 20–120 Min., q = Kampfkraft Angreifer ÷ Verteidiger, kein Abbruch) → Plündern (10 Min. + 2 Min. je 2.000 Rohstoffe, höchstens 60) → Rückmarsch → Regeneration (4 h + 2 Min. je Gefallenem, höchstens 8 h; Wartung 2 % des Einheitenwerts, halb Euro, halb Nahrung). Alle Zeiten ÷ Tempo. Der Kampf wird zu Gefechtsbeginn berechnet und am Ende gebucht; die Beute kommt aus dem Vorrat am Ende der Plünderung. |
+| **Einsatzgruppen** | Züge, Planungshilfe | Jeder Raubzug belegt eine Gruppe vom Rüsten bis zum Ende der Regeneration; ohne freie Gruppe kein Raubzug. Verteidigen, Transporte, Erkunden und Besiedeln sind nicht betroffen. |
+| **Kommandozentrale** | Gebäude | +1 Einsatzgruppe je Stufe, höchstens Stufe 3, nur in einem Bereich; braucht Zentrale 6, Forschungszentrum 5, Sicherheitszentrale 5, Logistik 2, Funktechnik 2, Taktik 1. |
+| **Mannschaftstransporter** | Fuhrpark | 35 km/h (Fahrzeugtechnik +10 %), 10 Plätze (Logistik +15 %); Sicherheitskraft 1 Platz, Einsatzteam 2; wer keinen Platz hat, läuft und bestimmt das Tempo. Die **Sicherheitskraft** läuft jetzt 5 km/h (Radwegenetz gilt nur noch für Kuriere). |
+| **Neue Forschungen** | Forschung | Logistik (+15 % Plätze), Funktechnik (−5 % Rüst- und Spähzeit), Taktik (−5 % Regeneration), je höchstens −25 %. |
+| **Blauhelme** | Kopf, Zielauswahl, Kampfbericht | Wer einen Raubzug verliert, bekommt eine neutrale Schutztruppe mit 60 % der Kampfkraft des Siegers, linear auf 0 in 6 h ÷ Tempo; eine weitere Niederlage verstärkt sie bis 100 %. Ab 50 % Tagesverlust stehen sie in voller Stärke des stärksten Siegers. Sie fallen nicht und greifen gegen ein Rückschlagrecht nicht ein. |
+| **Keine Verbote mehr** | – | Die persönliche Sperre und der Vollschutz aus Version 8 entfallen (bestehende Sperren laufen aus). Die Verlustgrenze bleibt als **Beutegrenze**: ab 50 % im Fenster gibt es keine Beute mehr. Tresor, Stärkeverhältnis, Rückschlag, Wiederaufbauhilfe und Spionage-Abwehr bleiben. |
+| **NPC-Mitspieler** | Spielleitung, Rangliste (🤖) | Anzahl 0–6 (Standard 0); regelbasiert ohne KI: bauen, forschen, verteidigen, handeln über dieselben Funktionen wie Spieler, ein Schritt je 30 Min. ÷ Tempo beim Seitenaufruf. Typen Händler, Aufbauer, Festung. Ziel 70–90 % des Medians der aktiven Spieler, Wachstumshilfe täglich angepasst. Greifen nie von sich aus an, schlagen einmal mit halber Truppe zurück. Keine Anmeldung, kein Anfängerschutz, zählen nicht zu `max_spieler`. Optional erfindet Haiku die Namen. |
+| **Spieluhr** | Kopfzeile | Tag und Nacht laufen mit dem Spieltempo (siehe Version 6, Tag und Nacht). |
+| **Moderne Bereichsansicht** | Übersicht | Bürogebäude, Glashäuser, Blechhallen, Wohnblöcke, Leitstelle mit Funkmast; Barrikaden als Betonleitwände und Container, Wachtürme aus Stahl mit Scheinwerfer, Schutzwall als Betonmauer mit Schranke; neue Symbole für Nahrung, Euro und Transporter. |
+
+Neue Tabellen: `einsatzgruppen`, `blauhelme`, `npc`; neue Spalten `zuege.phase`, `zuege.gruppe`, `zuege.kampf`, `spieler.ist_npc`.
+Raubzüge, die beim Update schon unterwegs sind, kämpfen wie bisher sofort bei Ankunft.
+
 ## Spieltempo und Balancing
 
 - `config.php` → `spiel.tempo`: 1 = normal, 2 = doppelt so schnell. Gilt für Produktion und Bauzeiten.
@@ -219,6 +240,7 @@ Er legt nur neue Tabellen und Spalten an und den Ordner `public/uploads/wappen/`
 Version 7 (Planungshilfe, KI-Berater, moderne Begriffe; Datenbankstruktur 6) braucht den Update-Schritt ebenfalls – er legt nur
 die Tabellen `ki_chat` und `ki_log` an. Siehe `upload/UPDATE-V7-ANLEITUNG.md`.
 Version 8 (Fairness; Datenbankstruktur 7) braucht den Update-Schritt ebenfalls und enthält Version 7. Siehe `upload/UPDATE-V8-ANLEITUNG.md`.
+Version 9 (Einsätze, Blauhelme, NPC; Datenbankstruktur 8) braucht den Update-Schritt ebenfalls und enthält Version 7 und 8. Siehe `upload/UPDATE-V9-ANLEITUNG.md`.
 
 ## Optional: GitHub + automatisches Hochladen
 

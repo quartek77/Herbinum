@@ -50,8 +50,9 @@ function punkte_alle(): array
             $plus((int)$r['besitzer_id'], 'einheiten', $stueck($r['typ']) * (int)$r['anzahl']);
         }
     }
-    foreach ($db->query('SELECT spieler_id, einheiten FROM zuege
-                         UNION ALL SELECT b.besitzer_id, a.einheiten FROM bunker_auslagerung a JOIN bereiche b ON b.id = a.bereich_id WHERE b.besitzer_id IS NOT NULL') as $r) {
+    // rüstende Raubzüge nicht doppelt zählen – ihre Einheiten stehen noch im Bereich
+    foreach ($db->query("SELECT spieler_id, einheiten FROM zuege WHERE phase <> 'ruesten'
+                         UNION ALL SELECT b.besitzer_id, a.einheiten FROM bunker_auslagerung a JOIN bereiche b ON b.id = a.bereich_id WHERE b.besitzer_id IS NOT NULL") as $r) {
         foreach (json_decode($r['einheiten'], true) ?: [] as $t => $n) {
             if (isset(EINHEITEN[$t])) {
                 $plus((int)$r['spieler_id'], 'einheiten', $stueck($t) * (int)$n);
@@ -73,7 +74,7 @@ function rangliste(string $nach = 'gesamt'): array
 {
     $nach = in_array($nach, ['gesamt', 'gebaeude', 'forschung', 'einheiten'], true) ? $nach : 'gesamt';
     $punkte = punkte_alle();
-    $liste = db()->query('SELECT s.id, s.name, s.farbe, s.gesperrt, s.zuletzt_ts, g.kuerzel, g.id AS gid, g.name AS gname, g.wappen,
+    $liste = db()->query('SELECT s.id, s.name, s.farbe, s.gesperrt, s.zuletzt_ts, s.ist_npc, g.kuerzel, g.id AS gid, g.name AS gname, g.wappen,
                                  (SELECT COUNT(*) FROM bereiche b WHERE b.besitzer_id = s.id) AS bereiche
                           FROM spieler s LEFT JOIN genossenschaften g ON g.id = s.genossenschaft_id')->fetchAll();
     foreach ($liste as &$s) {
@@ -335,7 +336,8 @@ function online_lampe(int $zuletzt): string
 /** Spielername mit Farbe und Online-Lampe. $s braucht name, farbe, zuletzt_ts. */
 function spieler_html(array $s): string
 {
-    return '<span class="spielername">' . online_lampe((int)($s['zuletzt_ts'] ?? 0)) . '<i class="farbpunkt" style="background:' . h((string)$s['farbe']) . '"></i>' . h((string)$s['name']) . '</span>';
+    return '<span class="spielername">' . online_lampe((int)($s['zuletzt_ts'] ?? 0)) . '<i class="farbpunkt" style="background:' . h((string)$s['farbe']) . '"></i>' . h((string)$s['name'])
+        . (!empty($s['ist_npc']) ? ' <span class="npc-marke" title="computergesteuerter Mitspieler">🤖</span>' : '') . '</span>';
 }
 
 /** Allianz-Kürzel als Link; beim Überfahren erscheint das Wappen mit dem Namen. $g braucht id, kuerzel, name, wappen. */

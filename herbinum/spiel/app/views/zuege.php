@@ -15,6 +15,10 @@ $meineGid = (int)($gen['id'] ?? 0);
 // Ziele mit Entfernung und Beziehung (eigen, allianz, fremd, frei); Orte nach Entfernung zum Startbereich
 $ziele = [];
 $schutzCache = $sperreCache = $raumCache = [];
+$blauhelme = [];
+foreach (db()->query('SELECT * FROM blauhelme')->fetchAll() as $r) {
+    $blauhelme[$r['bereich_id']] = $r;
+}
 $orte = [];
 foreach ($alle as $x) {
     if ($x['id'] === $b['id']) {
@@ -33,6 +37,8 @@ foreach ($alle as $x) {
                 'besitzer' => $x['besitzer'] ? $x['besitzer'] . ($x['kuerzel'] ? " [{$x['kuerzel']}]" : '') : '',
                 'schutz' => $rel === 'fremd' && $schutzCache[$bes] ? date('d.m. H:i', $schutzCache[$bes]) : '',
                 'spielraum' => $rel === 'fremd' ? (int)$raumCache[$bes] : null,
+                'blauhelme' => $rel === 'fremd' && isset($blauhelme[$x['id']]) && (float)$blauhelme[$x['id']]['staerke'] > 0
+                    ? (int)round(100 * blauhelme_rest($blauhelme[$x['id']], time()) / (float)$blauhelme[$x['id']]['staerke']) : 0,
                 'sperre' => $rel === 'fremd' && $sperreCache[$bes] ? date('d.m. H:i', $sperreCache[$bes]) : ''];
     $o = &$orte[$x['ort_id']];
     $o ??= ['id' => $x['ort_id'], 'name' => $x['ort'], 'km' => INF, 'frei' => 0, 'besetzt' => 0, 'eigen' => 0];
@@ -46,7 +52,8 @@ $kmText = fn(float $km) => str_replace('.', ',', (string)round($km, 1)) . ' km';
 // Werte für die Live-Vorschau im Browser (gleiche Formeln wie auf dem Server)
 $einheitenJs = [];
 foreach (bewegliche(array_fill_keys(array_keys(EINHEITEN), 1)) as $typ => $_) {
-    $einheitenJs[$typ] = ['kmh' => einheit_kmh($typ, $z['fo']), 'ladung' => EINHEITEN[$typ]['ladung'], 'korn_km' => EINHEITEN[$typ]['korn_km']];
+    $einheitenJs[$typ] = ['kmh' => einheit_kmh($typ, $z['fo']), 'ladung' => EINHEITEN[$typ]['ladung'], 'korn_km' => EINHEITEN[$typ]['korn_km'],
+                          'platz' => PLATZBEDARF[$typ] ?? 0, 'angriff' => EINHEITEN[$typ]['angriff'], 'name' => EINHEITEN[$typ]['name']];
 }
 $mobil = bewegliche($z['einheiten']);
 $koord = [];
@@ -57,6 +64,21 @@ $auftraege = $vertretung ? array_intersect_key(AUFTRAEGE, ['transport' => 1, 've
 $eigene = zuege_des_spielers($sid);
 $fremde = ankommende_zuege($sid);
 $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × " . EINHEITEN[$t]['name'], array_keys($e), $e));
+$gruppen = einsatzgruppen(db(), $sid);
+// Was die Zeile eines Raubzugs anzeigt: [Countdown-Text, Abbruch-Knopf oder null]
+$phaseZeile = function (array $zg): array {
+    if ($zg['status'] !== 'hin') {
+        return ['Rückkehr in', null];
+    }
+    return match ($zg['phase'] ?? '') {
+        'ruesten' => ['Ausrücken in', 'Absagen'],
+        'marsch', '' => ['Ankunft in', 'Umkehren'],
+        'spaehen' => ['Gefecht beginnt in', 'Rückzug'],
+        'gefecht' => ['Gefecht endet in', null],
+        'pluendern' => ['Plünderung endet in', null],
+        default => ['Nächster Schritt in', null],
+    };
+};
 ?>
 <div class="kopfzeile">
   <div>
@@ -74,7 +96,9 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
       <form method="post" class="zugformular" id="zugform"
             data-start="<?= h(json_encode([(int)$b['x'], (int)$b['y']])) ?>" data-koord="<?= h(json_encode($koord)) ?>"
             data-einheiten="<?= h(json_encode($einheitenJs)) ?>" data-tempo="<?= tempo() ?>"
-            data-umweg="<?= UMWEG_FAKTOR ?>" data-min="<?= MIN_STRECKE_KM ?>" data-faktor="<?= round(ereignis_zugfaktor($b, time()), 3) ?>">
+            data-umweg="<?= UMWEG_FAKTOR ?>" data-min="<?= MIN_STRECKE_KM ?>" data-faktor="<?= round(ereignis_zugfaktor($b, time()), 3) ?>"
+            data-plaetze="<?= round(mw_plaetze($z['fo']), 2) ?>" data-ruesten="<?= h(json_encode([RUESTEN_MIN, RUESTEN_JE_20_MIN, RUESTEN_MAX_MIN, zeitbonus($z['fo'], 'funktechnik')])) ?>"
+            data-spaehen="<?= spaehzeit_s($z['fo'], tempo()) ?>" data-gefecht="<?= h(json_encode([GEFECHT_MIN_MIN, GEFECHT_MAX_MIN])) ?>" data-gruppe-frei="<?= freie_einsatzgruppe(db(), $sid, time()) ? 1 : 0 ?>">
         <?= csrf_feld() ?>
         <input type="hidden" name="a" value="losschicken">
         <input type="hidden" name="bereich" value="<?= h($b['id']) ?>">
@@ -154,14 +178,24 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
         <ol class="queue">
           <?php foreach ($eigene as $zg):
               $hin = $zg['status'] === 'hin';
-              $ende = $hin ? (int)$zg['ankunft_ts'] : (int)$zg['rueckkehr_ts']; ?>
+              $ende = $hin ? (int)$zg['ankunft_ts'] : (int)$zg['rueckkehr_ts'];
+              [$wann, $knopf] = $zg['auftrag'] === 'angriff' ? $phaseZeile($zg) : [$hin ? 'Ankunft in' : 'Rückkehr in', $hin ? 'Umkehren' : null]; ?>
             <li><div>
               <b><?= AUFTRAEGE[$zg['auftrag']] ?></b> <?= $hin ? 'nach' : 'zurück von' ?> <?= h($label($zg['ziel_id'])) ?>
-              <div class="leise"><?= h($einheitenText(zug_einheiten($zg))) ?></div>
-              <div class="leise"><?= $hin ? 'Ankunft' : 'Rückkehr' ?> in <span class="countdown" data-ende="<?= $ende ?>"><?= dauer($ende - time()) ?></span></div>
+              <?php if ($zg['auftrag'] === 'angriff' && ($zg['phase'] ?? '') !== ''): ?>
+                <ol class="phasen" aria-label="Phasen des Raubzugs">
+                  <?php $aktiv = $zg['status'] === 'hin' ? $zg['phase'] : 'rueckmarsch'; $vorbei = true;
+                  foreach (PHASEN as $k => $n): $istAktiv = $k === $aktiv; if ($istAktiv) $vorbei = false; ?>
+                    <li class="<?= $istAktiv ? 'aktiv' : ($vorbei ? 'vorbei' : '') ?>"<?= $istAktiv ? ' aria-current="step"' : '' ?>><?= h($n) ?></li>
+                  <?php endforeach ?>
+                  <li>Regeneration</li>
+                </ol>
+              <?php endif ?>
+              <div class="leise"><?= h($einheitenText(zug_einheiten($zg))) ?><?= ($zg['phase'] ?? '') === 'ruesten' ? ' – noch im Bereich, verteidigen mit' : '' ?></div>
+              <div class="leise"><?= $wann ?> <span class="countdown" data-ende="<?= $ende ?>"><?= dauer($ende - time()) ?></span></div>
             </div>
-            <?php if ($hin): ?>
-              <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="umkehren"><input type="hidden" name="zug" value="<?= (int)$zg['id'] ?>"><button class="knopf leicht" type="submit">Umkehren</button></form>
+            <?php if ($knopf): ?>
+              <form method="post"><?= csrf_feld() ?><input type="hidden" name="a" value="umkehren"><input type="hidden" name="zug" value="<?= (int)$zg['id'] ?>"><button class="knopf leicht" type="submit"><?= $knopf ?></button></form>
             <?php endif ?>
             </li>
           <?php endforeach ?>
@@ -174,19 +208,34 @@ $einheitenText = fn(array $e) => implode(', ', array_map(fn($t, $n) => "{$n} × 
         <ol class="queue">
           <?php foreach ($fremde as $zg): ?>
             <li><div>
-              <b><?= h($zg['absender']) ?></b>: <?= $zg['auftrag'] === 'angriff' ? '<span class="gefahr">Raubzug</span>' : AUFTRAEGE[$zg['auftrag']] ?> nach <?= h($label($zg['ziel_id'])) ?>
-              <div class="leise">Ankunft in <span class="countdown" data-ende="<?= (int)$zg['ankunft_ts'] ?>"><?= dauer($zg['ankunft_ts'] - time()) ?></span></div>
+              <b><?= h($zg['absender']) ?></b>: <?= $zg['auftrag'] === 'angriff' ? '<span class="gefahr">Raubzug</span> (' . h(phase_text($zg)) . ')' : AUFTRAEGE[$zg['auftrag']] ?> nach <?= h($label($zg['ziel_id'])) ?>
+              <div class="leise"><?= $zg['auftrag'] === 'angriff' ? $phaseZeile($zg)[0] : 'Ankunft in' ?> <span class="countdown" data-ende="<?= (int)$zg['ankunft_ts'] ?>"><?= dauer($zg['ankunft_ts'] - time()) ?></span></div>
             </div></li>
           <?php endforeach ?>
         </ol>
       </section>
     <?php endif ?>
     <section class="karte-box">
-      <h2>Faire Regeln</h2>
+      <h2>Einsatzgruppen</h2>
+      <ul class="liste-leise">
+        <?php foreach ($gruppen as $g => $x): ?>
+          <li><b>Gruppe <?= $g ?>:</b>
+            <?php if ($x['zug_id'] !== null): ?>im Einsatz
+            <?php elseif (!$x['frei']): ?>Regeneration bis <?= date('d.m. H:i', $x['bereit_ab']) ?> Uhr (<span class="countdown" data-ende="<?= $x['bereit_ab'] ?>"><?= dauer($x['bereit_ab'] - time()) ?></span>)
+            <?php else: ?>einsatzbereit<?php endif ?></li>
+        <?php endforeach ?>
+      </ul>
+      <p class="leise">Jeder Raubzug belegt eine Gruppe vom Rüsten bis zum Ende der Regeneration. Mehr Gruppen gleichzeitig erlaubt die
+        <a href="?s=gebaeude#g-kommandozentrale">Kommandozentrale</a> (bis <?= 1 + KOMMANDO_MAX_STUFE ?>).</p>
+    </section>
+    <section class="karte-box">
+      <h2>Einsatzregeln</h2>
       <ul class="regeln-fair">
-        <li><b>Sperre:</b> Wer jemanden überfallen hat, kann ihn erst nach einer Weile wieder angreifen – je größer der Schaden und je schwächer das Opfer, desto länger (höchstens <?= round(SCHUTZ_T_BASIS_H * (1 + SCHUTZ_K_SCHWAECHE) / tempo(), 1) ?> h). Andere Spieler sperrt das nicht aus.</li>
-        <li><b>Verlustgrenze:</b> Die Beute wird so gekürzt, dass ein Angriff samt Kampfverlusten höchstens <?= round(VERLUST_MAX_ANGRIFF * 100) ?> % des Vermögens kostet und alle Angriffe in <?= round(SCHUTZ_FENSTER_H / tempo()) ?> h zusammen höchstens <?= round(VERLUST_MAX_TAG * 100) ?> % – egal wie viele angreifen. Ist die Grenze erreicht, ist das Opfer für alle geschützt. Gefallene Einheiten bleiben verloren.</li>
-        <li><b>Rückschlag:</b> Wer selbst angreift, darf vom Ziel einmal zurückbekommen – auch trotz Sperre oder Grenze.</li>
+        <li><b>Ablauf:</b> Rüsten (<?= round(RUESTEN_MIN / tempo()) ?> Min.+, absagen kostenlos) → Anmarsch (die langsamste Einheit bestimmt das Tempo – zu Fuß <?= EINHEITEN['schuetze']['tempo'] ?> km/h, im Mannschaftstransporter schneller) → Spähen (<?= round(SPAEHEN_MIN / tempo()) ?> Min., Rückzug möglich, der Verteidiger wird gewarnt) → Gefecht (<?= round(GEFECHT_MIN_MIN / tempo()) ?>–<?= round(GEFECHT_MAX_MIN / tempo()) ?> Min., je überlegener, desto kürzer, kein Zurück) → Plündern → Rückmarsch.</li>
+        <li><b>Regeneration:</b> Danach werden Fahrzeuge gewartet, getankt und munitioniert: <?= round(REGENERATION_H / tempo(), 1) ?> h plus etwas je gefallener Einheit, kostet <?= round(WARTUNG_ANTEIL * 100) ?> % des Einheitenwerts. Verteidigen können die Einheiten sofort wieder.</li>
+        <li><b>Blauhelme:</b> Wer einen Raubzug verliert, bekommt eine neutrale Schutztruppe mit <?= round(BLAUHELM_ANTEIL * 100) ?> % der Kampfkraft des Siegers, die in <?= round(BLAUHELM_H / tempo(), 1) ?> h abnimmt. Angreifen bleibt möglich, wird aber teuer.</li>
+        <li><b>Verlustgrenze:</b> Die Beute wird so gekürzt, dass ein Angriff samt Kampfverlusten höchstens <?= round(VERLUST_MAX_ANGRIFF * 100) ?> % des Vermögens kostet und alle Angriffe in <?= round(SCHUTZ_FENSTER_H / tempo()) ?> h zusammen höchstens <?= round(VERLUST_MAX_TAG * 100) ?> %. Danach gibt es keine Beute mehr, und die Blauhelme stehen in voller Stärke bereit. Gefallene Einheiten bleiben verloren.</li>
+        <li><b>Rückschlag:</b> Wer selbst angreift, darf vom Ziel einmal zurückbekommen – gegen ihn greifen keine Blauhelme ein.</li>
         <li><b>Tresor:</b> <?= round(TRESOR_BASIS * 100) ?> % des Lagers sind nie erbeutbar, mit Sicherheitstechnik bis <?= round(TRESOR_MAX * 100) ?> %.</li>
         <li><b>Stärke:</b> Gegen Spieler unter <?= round(STAERKE_SPERRE * 100) ?> % deiner Punkte gibt es keine Raubzüge, bis <?= round(STAERKE_VOLL * 100) ?> % weniger Beute – außer sie haben dich zuerst angegriffen.</li>
         <li><b>Erkundung:</b> kostet Einsatzgeld, liefert Schätzungen, Kuriere können abgefangen werden; denselben Spieler nur alle <?= round(SPIONAGE_SPERRE_H / tempo(), 1) ?> h.</li>

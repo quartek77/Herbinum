@@ -99,17 +99,21 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
       <?php if (!empty($i['einheiten']) && $n['art'] !== 'bericht'): ?><p class="leise">Einheiten: <?= h(implode(', ', array_map(fn($t, $c) => "{$c} × " . (EINHEITEN[$t]['name'] ?? $t), array_keys($i['einheiten']), $i['einheiten']))) ?></p><?php endif ?>
       <?php if (isset($i['ladung']) && array_sum($i['ladung']) > 0): ?><p class="leise">Ladung: <?= h($res($i['ladung'])) ?></p><?php endif ?>
       <?php if ($n['art'] === 'kampf' && isset($i['a'])):
-          $seiteText = fn(array $s) => $s ? implode(', ', array_map(fn($t, $p) => (EINHEITEN[$t]['name'] ?? $t) . ' ' . $p[0] . ' → ' . $p[1], array_keys($s), $s)) : 'niemand'; ?>
+          $seiteText = fn(array $s) => $s ? implode(', ', array_map(fn($t, $p) => einheit_def($t)['name'] . ' ' . $p[0] . ' → ' . ($t === 'blauhelm' ? $p[0] : $p[1]), array_keys($s), $s)) : 'niemand'; ?>
         <dl class="bericht">
           <div><dt>Angreifer</dt><dd><?= h($i['angreifer']) ?>: <?= h($seiteText($i['a'])) ?></dd></div>
           <div><dt>Verteidiger</dt><dd><?= h($i['verteidiger']) ?>: <?= h($seiteText($i['v'])) ?></dd></div>
           <div><dt>Runden</dt><dd><?= (int)$i['runden'] ?> · Schutzwall Stufe <?= (int)$i['graben'] ?> · Wehrkraft <?= (int)$i['wehr'] ?><?= !empty($i['nacht']) ? ' · Nachtwache +' . round(NACHT_VERTEIDIGUNG * 100) . ' %' : '' ?></dd></div>
+          <?php if (isset($i['gefecht_s'])): ?><div><dt>Gefecht</dt><dd><?= dauer((int)$i['gefecht_s']) ?> · Kampfkraft <?= zahl((int)$i['k_a']) ?> gegen <?= zahl((int)$i['k_v']) ?></dd></div><?php endif ?>
+          <?php if (!empty($i['blauhelme'])): ?><div><dt>Blauhelme</dt><dd><?= (int)$i['blauhelme'] ?> haben mitverteidigt (sie fallen nicht)</dd></div><?php endif ?>
+          <?php if (!empty($i['blauhelme_neu'])): ?><div><dt>Schutz</dt><dd>Blauhelme sichern <?= h($i['verteidiger']) ?> jetzt für <?= dauer((int)round(BLAUHELM_H * 3600 / tempo())) ?> ab – abnehmend</dd></div><?php endif ?>
           <?php if (array_sum($i['beute'])): ?><div><dt>Beute</dt><dd><?= h($res($i['beute'])) ?></dd></div><?php endif ?>
           <?php if ($i['nachgewachsen']): ?><div><dt>Nachgewachsen</dt><dd><?= h(implode(', ', array_map(fn($t, $c) => "{$c} × " . EINHEITEN[$t]['name'], array_keys($i['nachgewachsen']), $i['nachgewachsen']))) ?></dd></div><?php endif ?>
           <?php if (isset($i['beutefaktor']) && $i['beutefaktor'] < 1): ?><div><dt>Beutefaktor</dt><dd><?= round($i['beutefaktor'] * 100) ?> % (deutlicher Stärkeunterschied)</dd></div><?php endif ?>
           <?php if (!empty($i['tresor']) && ($i['seite'] ?? '') === 'verteidiger'): ?><div><dt>Im Tresor sicher</dt><dd><?= h($res($i['tresor'])) ?></dd></div><?php endif ?>
           <?php if (isset($i['schaden'])): ?><div><dt>Schaden</dt><dd><?= round($i['schaden'] * 100) ?> % des Vermögens<?= ($i['schaden_24'] ?? 0) > $i['schaden'] + 0.001 ? ' · in 24 h zusammen ' . round($i['schaden_24'] * 100) . ' %' : '' ?></dd></div><?php endif ?>
           <?php if (!empty($i['gekappt'])): ?><div><dt>Verlustgrenze</dt><dd>Beute gekürzt – mehr als <?= round(VERLUST_MAX_ANGRIFF * 100) ?> % je Angriff bzw. <?= round(VERLUST_MAX_TAG * 100) ?> % in <?= round(SCHUTZ_FENSTER_H / tempo()) ?> h darf niemand verlieren</dd></div><?php endif ?>
+          <?php if (isset($i['gefecht_s'], $i['spielraum'])): ?><div><dt>Spielraum</dt><dd><?= $i['spielraum'] > 0 ? h($i['verteidiger']) . ' kann noch um bis zu ' . round(min(VERLUST_MAX_ANGRIFF, $i['spielraum']) * 100) . ' % je Angriff geschwächt werden' : 'Tagesgrenze erreicht – bei ' . h($i['verteidiger']) . ' gibt es vorerst keine Beute mehr' ?></dd></div><?php endif ?>
           <?php if (!empty($i['sperre_bis'])): ?><div><dt>Sperre</dt><dd><?= h($i['angreifer']) ?> kann <?= h($i['verteidiger']) ?> erst ab <?= date('d.m. H:i', (int)$i['sperre_bis']) ?> Uhr wieder überfallen</dd></div><?php endif ?>
           <?php if (!empty($i['vollschutz_bis'])): ?><div><dt>Tagesgrenze</dt><dd><?= h($i['verteidiger']) ?> ist bis <?= date('d.m. H:i', (int)$i['vollschutz_bis']) ?> Uhr für alle geschützt</dd></div>
           <?php elseif (isset($i['spielraum']) && isset($i['sperre_bis'])): ?><div><dt>Spielraum</dt><dd>andere können <?= h($i['verteidiger']) ?> noch um bis zu <?= round(min(VERLUST_MAX_ANGRIFF, $i['spielraum']) * 100) ?> % je Angriff schwächen</dd></div><?php endif ?>
@@ -128,6 +132,7 @@ $empfaenger = array_values(array_filter(spieler_namen(), fn($s) => (int)$s['id']
           <?php if (!empty($i['vorraete_unbekannt'])): ?><div><dt>Vorräte</dt><dd>nicht erkennbar – die Abschirmung war zu stark</dd></div><?php endif ?>
           <?php if (array_key_exists('einheiten', $i)): ?><div><dt>Einheiten</dt><dd><?= $i['einheiten'] ? h(implode(', ', array_map(fn($t, $c) => $wert($c) . ' × ' . (EINHEITEN[$t]['name'] ?? $t), array_keys($i['einheiten']), $i['einheiten']))) : 'keine' ?></dd></div><?php endif ?>
           <?php if (array_key_exists('bunker_belegt', $i)): ?><div><dt>Bunker</dt><dd><?= $i['bunker_belegt'] ? 'belegt' : 'leer' ?></dd></div><?php endif ?>
+          <?php if (array_key_exists('blauhelme', $i)): ?><div><dt>Blauhelme</dt><dd><?= (int)$i['blauhelme'] ? 'etwa ' . (int)$i['blauhelme'] . ' vor Ort' : 'keine' ?> · noch <?= round(min(VERLUST_MAX_ANGRIFF, (float)($i['spielraum'] ?? VERLUST_MAX_TAG)) * 100) ?> % Spielraum je Angriff</dd></div><?php endif ?>
           <?php if (array_key_exists('vollschutz_bis', $i)): ?><div><dt>Schutz</dt><dd><?= $i['vollschutz_bis'] ? 'Tagesgrenze erreicht – geschützt bis ' . date('d.m. H:i', (int)$i['vollschutz_bis']) . ' Uhr'
               : 'angreifbar, noch ' . round(min(VERLUST_MAX_ANGRIFF, (float)($i['spielraum'] ?? VERLUST_MAX_TAG)) * 100) . ' % Spielraum je Angriff' ?></dd></div><?php endif ?>
           <?php if (!empty($i['abgefangen'])): ?><div><dt>Verluste</dt><dd><?= (int)$i['abgefangen'] ?> von <?= (int)$i['kuriere'] ?> Kurieren abgefangen – der Spieler weiß, dass du es warst</dd></div><?php endif ?>

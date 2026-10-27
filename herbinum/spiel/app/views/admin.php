@@ -186,6 +186,31 @@ $kiFehler = einstellung('zeitung_ki_fehler', '');
 </div>
 
 <section class="karte-box">
+  <h2>NPC-Mitspieler</h2>
+  <p class="leise">Computergesteuerte Mitspieler besiedeln freie Bereiche und spielen defensiv: Sie bauen, forschen, verteidigen und handeln,
+    greifen aber nie von sich aus an – höchstens einmal zurück. Ihre Stärke folgt 70–90 % des Mittelfelds der aktiven Spieler.
+    Für offensive Spieler sind sie faire Ziele. Sie zählen nicht zur Spielerzahl und können sich nicht anmelden.</p>
+  <form method="post" class="admin-ki">
+    <?= csrf_feld() ?><input type="hidden" name="a" value="admin_npc">
+    <label for="npc-anz">Anzahl (0–<?= NPC_MAX ?>)</label>
+    <input id="npc-anz" name="anzahl" type="number" min="0" max="<?= NPC_MAX ?>" value="<?= npc_soll() ?>">
+    <label class="haken"><input type="checkbox" name="ki_namen" value="1"<?= einstellung('npc_ki_namen', '0') === '1' ? ' checked' : '' ?>> Namen von der KI erfinden lassen (eine kurze Haiku-Anfrage je neuem NPC)</label>
+    <button class="knopf" type="submit">Speichern</button>
+  </form>
+  <?php if ($npcs = npc_liste()): ?>
+    <div class="tabelle-rahmen">
+    <table class="tabelle">
+      <tr><th>Name</th><th>Typ</th><th>Bereich</th><th>Punkte / Ziel</th><th>Wachstum</th></tr>
+      <?php foreach ($npcs as $n): ?>
+        <tr><td><?= h($n['name']) ?> 🤖</td><td><?= h(NPC_TYPEN[$n['typ']]['name'] ?? $n['typ']) ?></td><td><?= h(bereich_name(db(), (string)$n['bereich_id'])) ?></td>
+            <td><?= zahl($n['punkte']) ?> / <?= zahl($n['ziel']) ?></td><td>× <?= str_replace('.', ',', (string)round((float)$n['prod_faktor'], 2)) ?></td></tr>
+      <?php endforeach ?>
+    </table>
+    </div>
+  <?php endif ?>
+</section>
+
+<section class="karte-box">
   <h2>Spieler</h2>
   <div class="tabelle-rahmen">
   <table class="tabelle spielertabelle">

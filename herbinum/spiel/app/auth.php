@@ -89,7 +89,7 @@ function registrieren(string $name, string $pass, string $pass2, string $ortId):
     $db->beginTransaction();
     try {
         // Sperre auf die Spielertabelle verhindert, dass zwei gleichzeitige Anmeldungen das Limit überschreiten
-        $anzahl = (int)$db->query('SELECT COUNT(*) FROM spieler FOR UPDATE')->fetchColumn();
+        $anzahl = (int)$db->query('SELECT COUNT(*) FROM spieler WHERE ist_npc = 0 FOR UPDATE')->fetchColumn();   // NPC-Mitspieler zählen nicht
         if ($anzahl >= (int)(config()['spiel']['max_spieler'] ?? 40)) {
             $db->rollBack();
             return 'Herbinum ist voll – alle Plätze sind vergeben.';

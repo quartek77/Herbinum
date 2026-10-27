@@ -15,7 +15,7 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
 | Raumschiffe, Flotten | Transporter, E-Bike-Kuriere, Siedlerkonvois, Sicherheitskräfte, Einsatzteams |
 | Allianzen | Allianzen (früher „Genossenschaften“) mit Wappen |
 
-## Umfang (Version 8)
+## Umfang (Version 9)
 
 - **Karte aus OpenStreetMap:** Regionskarte, Ortspläne mit echten Gebäuden/Straßen, 207 Bereiche – automatisch aus der
   Bebauung abgeleitet, nach echten Straßen/Bauerschaften benannt.
@@ -36,7 +36,9 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
   ohne verräterische Details und Blick in den öffentlichen Chat – auf Wunsch von einer KI geschrieben (Stil einstellbar), sonst als Kurzmeldungen.
 - **Planungshilfe „Was brauche ich?“:** an jedem Gebäude, jeder Forschung und Einheit alle fehlenden Stufen in Bau-Reihenfolge mit Kosten –
   bei Einheiten auch, was zum Einsetzen fehlt (z. B. Verwaltung für den Siedlerkonvoi), plus Gesamtkosten und Wartezeit bis einsatzbereit.
-- **Fairness für Gelegenheitsspieler:** persönliche Sperre nach Überfällen nur für den Angreifer (Länge = Schaden × 12–24 h je nach Stärkeunterschied), Verlustgrenze pro Opfer (25 % je Angriff, 50 % pro Tag, dann Vollschutz für alle), einmaliges Rückschlagrecht, Tresor-Anteil im Lager, keine/weniger Beute gegen deutlich Schwächere, Wiederaufbauhilfe nach Niederlagen, Spionage mit Kosten, Unschärfe, Abfangen und Sperrzeit. Ständige Anwesenheit bringt so keinen erdrückenden Vorteil mehr – Taktik schon.
+- **Fairness für Gelegenheitsspieler:** Verlustgrenze pro Opfer (25 % je Angriff, 50 % pro Tag, danach keine Beute mehr), einmaliges Rückschlagrecht, Tresor-Anteil im Lager, keine/weniger Beute gegen deutlich Schwächere, Wiederaufbauhilfe nach Niederlagen, Spionage mit Kosten, Unschärfe, Abfangen und Sperrzeit. Ständige Anwesenheit bringt so keinen erdrückenden Vorteil mehr – Taktik schon.
+- **Einsätze statt Sperren (Version 9):** Raubzüge in Phasen – Rüsten, Anmarsch, Spähen (Verteidiger wird gewarnt), Gefecht 10–60 Min. je nach Überlegenheit, Plündern, Rückmarsch, Regeneration mit Wartungskosten. Jeder Raubzug belegt eine Einsatzgruppe, die Kommandozentrale bringt bis zu 4. Mannschaftstransporter bringen Fußtruppen schnell ans Ziel. Verlierer bekommen Blauhelme (neutrale, abnehmende Schutztruppe) statt eines Angriffsverbots.
+- **NPC-Mitspieler:** regelbasiert, ohne KI-Kosten; bauen, forschen, verteidigen, handeln, schlagen höchstens einmal zurück; Anzahl in der Spielleitung, Stärke folgt dem Mittelfeld – faire Ziele für offensive Spieler.
 - **KI-Berater:** Jeder Spieler fragt eine KI nach seinen eigenen Daten („Wann kann ich X erforschen?“, „Was soll ich in welcher Reihenfolge bauen?“);
   mit Anleitung und Beispielfragen, Tageslimit pro Spieler.
 - **Oberfläche:** Seitenleiste mit Gruppen und Icons, Rohstoffleiste mit Lagerbalken, Tageszeit im Kopf, Zielauswahl für Züge in zwei Schritten (Ort nach Entfernung, dann Bereich).
@@ -105,10 +107,6 @@ Bis zu 40 Spieler aus der Region erkennen ihre Orte und Straßen wieder – mit 
 - **Fairness gehört von Anfang an ins Kampfsystem:** Ohne Schutzzeit, Tresor und Stärkeverhältnis „farmen“ Dauer-Online-Spieler Gelegenheitsspieler aus dem Spiel. Die Regeln sollten offen im Spiel stehen – dann sind sie Spielmechanik und keine Diskussion.
 
 ## Offene Ideen
-
-**Version 9 (Konzept, `konzepte/V9-KONZEPT-EINSAETZE.md`):** Raubzüge in Phasen (Rüsten, Marsch, Spähen mit Warnung, Gefecht 10–60 Min. je nach Überlegenheit,
-Plündern, Rückmarsch, Regeneration) statt Sperren; Einsatzgruppen und Kommandozentrale für parallele Angriffe; Mannschaftstransporter;
-Blauhelme statt Vollschutz; regelbasierte NPC-Mitspieler (Anzahl in der Spielleitung, Stärke folgt dem Mittelfeld, KI nur für Namen).
 
 Gemeinsame Verteidigung in Allianzen (Truppen bei Verbündeten stationieren), Lieferung beim Spielerhandel per Transporter statt sofort,
 weitere KI-Funktionen (Händler mit Tageslaune, KI-Lagebericht für die Allianz), positive Ereignisse (Festivals, Förderprogramme).

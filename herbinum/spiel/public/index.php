@@ -204,10 +204,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ziel = (string)($_POST['ziel'] ?? '');
         $auftrag = (string)($_POST['auftrag'] ?? '');
         $f = zug_starten($bid, $sid, $ziel, $auftrag, (array)($_POST['e'] ?? []), (array)($_POST['l'] ?? []), $vertretung !== null);
-        $fertig($f, 'Der Zug ist unterwegs (' . (AUFTRAEGE[$auftrag] ?? $auftrag) . ' nach ' . bereich_name(db(), $ziel) . ').', 'zuege', $f ? ['ziel' => $ziel, 'auftrag' => $auftrag] : []);
+        $fertig($f, ($auftrag === 'angriff' ? 'Die Truppen rüsten sich (Raubzug nach ' : 'Der Zug ist unterwegs (' . (AUFTRAEGE[$auftrag] ?? $auftrag) . ' nach ') . bereich_name(db(), $ziel) . ').',
+                'zuege', $f ? ['ziel' => $ziel, 'auftrag' => $auftrag] : []);
     }
     if ($a === 'umkehren') {
-        $fertig(zug_zurueckrufen($sid, (int)($_POST['zug'] ?? 0)), 'Der Zug kehrt um.', 'zuege');
+        $fertig(zug_zurueckrufen($sid, (int)($_POST['zug'] ?? 0)), 'Der Zug kehrt um – ein Raubzug, der noch rüstet, ist abgesagt.', 'zuege');
     }
     if ($a === 'bunker_einlagern' || $a === 'bunker_auslagern') {
         $e = (array)($_POST['e'] ?? []);
@@ -306,6 +307,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             })(),
             'admin_chat_loeschen' => chat_loeschen((int)($_POST['chat'] ?? 0)),
             'admin_ki' => ki_einstellungen_speichern($_POST),
+            'admin_npc' => (function () {
+                einstellung_setzen('npc_anzahl', (string)max(0, min(NPC_MAX, (int)($_POST['anzahl'] ?? 0))));
+                einstellung_setzen('npc_ki_namen', ($_POST['ki_namen'] ?? '') === '1' ? '1' : '0');
+                return npc_abgleichen(time());
+            })(),
             default => 'Unbekannte Admin-Aktion.',
         };
         $ok = [
@@ -317,6 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'admin_ereignisse_schalter' => ($_POST['aus'] ?? '') === '1' ? 'Zufallsereignisse sind aus.' : 'Zufallsereignisse sind an.',
             'admin_zeitung' => 'Die KI hat die heutige Ausgabe neu geschrieben.', 'admin_chat_loeschen' => 'Chatnachricht entfernt.',
             'admin_ki' => 'KI-Einstellungen gespeichert.',
+            'admin_npc' => 'NPC-Einstellungen gespeichert. Weitere NPCs kommen oder gehen alle 10 Minuten einzeln.',
         ];
         meldung($f ?? ($ok[$a] ?? 'Erledigt.'), $f ? 'fehler' : 'ok');
         weiter($a === 'admin_chat_loeschen' ? 'chat' : 'admin');
@@ -387,7 +394,7 @@ $ort->execute([$z['bereich']['ort_id']]);
 $sid = (int)$spieler['id'];
 $ungelesen = db()->prepare('SELECT COUNT(*) FROM nachrichten WHERE spieler_id = ? AND gelesen = 0');
 $ungelesen->execute([(int)$echt['id']]);
-$ueberfaelle = db()->prepare("SELECT COUNT(*) FROM zuege z JOIN bereiche b ON b.id = z.ziel_id WHERE b.besitzer_id = ? AND z.auftrag = 'angriff' AND z.status = 'hin'");
+$ueberfaelle = db()->prepare("SELECT COUNT(*) FROM zuege z JOIN bereiche b ON b.id = z.ziel_id WHERE b.besitzer_id = ? AND z.auftrag = 'angriff' AND z.status = 'hin' AND z.phase <> 'ruesten'");
 $ueberfaelle->execute([$sid]);
 $zeitungTag = db()->prepare('SELECT zeitung_tag FROM spieler WHERE id = ?');
 $zeitungTag->execute([(int)$echt['id']]);

@@ -225,25 +225,32 @@ function spieler_loeschen(int $adminId, int $sid, string $bestaetigung): ?string
         return 'Zur Sicherheit bitte den Spielernamen genau so eintippen, wie er angezeigt wird.';
     }
     return in_transaktion(function (PDO $db) use ($sid) {
-        // Allianz geordnet verlassen (Vorstand wird ggf. weitergegeben, leere Allianz aufgelöst)
-        gen_austritt_intern($db, $sid);
-        $st = $db->prepare('SELECT id FROM bereiche WHERE besitzer_id = ? FOR UPDATE');
-        $st->execute([$sid]);
-        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $bid) {
-            foreach (['gebaeude', 'einheiten', 'bauauftraege', 'werkstattauftraege', 'bunker', 'bunker_auslagerung'] as $t) {
-                $db->prepare("DELETE FROM {$t} WHERE bereich_id = ?")->execute([$bid]);
-            }
-            $db->prepare('UPDATE bereiche SET besitzer_id = NULL, ist_heimat = 0, holz = 0, ziegel = 0, korn = 0, taler = 0, stand_ts = ? WHERE id = ?')
-               ->execute([time(), $bid]);
-        }
-        // Forschung, Forschungsaufträge, eigene Züge, Nachrichten, Chat, Marktangebote und Vertretung fallen per Fremdschlüssel mit weg
-        foreach (['DELETE FROM angriffe_log WHERE angreifer_id = ? OR verteidiger_id = ?', 'DELETE FROM spionage_log WHERE spaeher_id = ? OR ziel_id = ?'] as $sql) {
-            $db->prepare($sql)->execute([$sid, $sid]);
-        }
-        $db->prepare('DELETE FROM angriffssperre WHERE verteidiger_id = ? OR angreifer_id = ?')->execute([$sid, $sid]);
-        $db->prepare('DELETE FROM spieler WHERE id = ?')->execute([$sid]);
+        spieler_daten_loeschen($db, $sid);
         return null;
     });
+}
+
+/** Löscht einen Spieler samt Spielstand (in einer laufenden Transaktion); seine Bereiche werden wieder frei. Auch für NPC-Mitspieler. */
+function spieler_daten_loeschen(PDO $db, int $sid): void
+{
+    // Allianz geordnet verlassen (Vorstand wird ggf. weitergegeben, leere Allianz aufgelöst)
+    gen_austritt_intern($db, $sid);
+    $st = $db->prepare('SELECT id FROM bereiche WHERE besitzer_id = ? FOR UPDATE');
+    $st->execute([$sid]);
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $bid) {
+        foreach (['gebaeude', 'einheiten', 'bauauftraege', 'werkstattauftraege', 'bunker', 'bunker_auslagerung', 'blauhelme'] as $t) {
+            $db->prepare("DELETE FROM {$t} WHERE bereich_id = ?")->execute([$bid]);
+        }
+        $db->prepare('UPDATE bereiche SET besitzer_id = NULL, ist_heimat = 0, holz = 0, ziegel = 0, korn = 0, taler = 0, stand_ts = ? WHERE id = ?')
+           ->execute([time(), $bid]);
+    }
+    // Forschung, Forschungsaufträge, eigene Züge, Nachrichten, Chat, Marktangebote und Vertretung fallen per Fremdschlüssel mit weg
+    foreach (['DELETE FROM angriffe_log WHERE angreifer_id = ? OR verteidiger_id = ?', 'DELETE FROM spionage_log WHERE spaeher_id = ? OR ziel_id = ?'] as $sql) {
+        $db->prepare($sql)->execute([$sid, $sid]);
+    }
+    $db->prepare('DELETE FROM angriffssperre WHERE verteidiger_id = ? OR angreifer_id = ?')->execute([$sid, $sid]);
+    $db->prepare('DELETE FROM einsatzgruppen WHERE spieler_id = ?')->execute([$sid]);
+    $db->prepare('DELETE FROM spieler WHERE id = ?')->execute([$sid]);
 }
 
 function rundschreiben(string $titel, string $text): ?string

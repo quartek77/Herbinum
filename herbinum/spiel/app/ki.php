@@ -213,7 +213,8 @@ Rohstoffe: {$res}. Strom wird nicht gelagert: Sägewerk, Baustoffwerk und Gewäc
 Bauzeiten sinken mit der Zentrale. Pro Bereich laufen mehrere Bauaufträge nacheinander; geforscht wird immer nur eine Sache gleichzeitig, bezahlt aus dem Bereich, in dem das Forschungszentrum steht. Forschung gilt für alle Bereiche.
 Weitere Bereiche gibt es per Siedlerkonvoi zu einem freien Bereich; wie viele erlaubt sind, regelt die Forschung Verwaltung (Stufe 1 → 2 Bereiche, 3 → 3, 5 → 4 …).
 Raubzüge nehmen bis zur Hälfte der ungeschützten Vorräte mit; ein Tresor-Anteil des Lagers (10 %, mit Sicherheitstechnik bis 50 %) ist nie erbeutbar. Verteidiger profitieren von Schutzwall, Wehrkraft der Lage und nachts von der Nachtwache. Der Bunker schützt eingelagerte Einheiten.
-Fairness: Wer jemanden überfallen hat, ist für dieses Opfer gesperrt (Sperre = Schadensanteil × 12 bis 24 h je nach Stärkeunterschied, geteilt durch das Spieltempo). Ein Opfer verliert durch einen Angriff höchstens 25 % und in 24 h (÷ Tempo) höchstens 50 % seines Vermögens; danach ist es für alle geschützt. Wer selbst angreift, darf vom Ziel einmal zurückbekommen. Gegen Spieler unter 20 % der eigenen Punkte gibt es keine Raubzüge, zwischen 20 und 50 % anteilig weniger Beute – außer sie haben zuerst angegriffen. Wer einen Raubzug verliert, produziert 12 h lang 25 % mehr. Erkundungen kosten Einsatzgeld, liefern Schätzungen und sind gegen denselben Spieler nur alle 6 h möglich; Abschirmung fängt Kuriere ab. Markt: Händler tauscht mit Verlust (besser durch Handelszentrum und Handelskunde).
+Raubzüge laufen in Phasen (alle Zeiten ÷ Spieltempo): Rüsten 30 Min. plus 2 Min. je 20 Einheiten (Truppen bleiben so lange im Bereich, absagen kostenlos), Anmarsch (die langsamste Einheit bestimmt das Tempo; Sicherheitskräfte laufen 5 km/h, im Mannschaftstransporter fahren sie 35 km/h – 10 Plätze, Einsatzteams brauchen 2), Spähen 20 Min. (Rückzug möglich, der Verteidiger wird mit Namen gewarnt), Gefecht 20–120 Min. (60 × 2 ÷ (1 + Kampfkraftverhältnis), kein Abbruch), Plündern 10–60 Min. je nach Beute, Rückmarsch, dann Regeneration 4 h plus 2 Min. je gefallener Einheit (Wartung 2 % des Einheitenwerts in Euro und Nahrung). Jeder Raubzug belegt eine Einsatzgruppe bis zum Ende der Regeneration; die Kommandozentrale (nur einmal, höchstens Stufe 3) bringt je Stufe eine weitere. Funktechnik beschleunigt Rüsten und Spähen, Taktik die Regeneration, Logistik bringt Plätze im Transporter.
+Fairness: Ein Opfer verliert durch einen Angriff höchstens 25 % und in 24 h (÷ Tempo) höchstens 50 % seines Vermögens – darüber hinaus gibt es keine Beute mehr. Wer einen Raubzug verliert, bekommt Blauhelme: eine neutrale Schutztruppe mit 60 % der Kampfkraft des Siegers, die in 6 h abnimmt und nicht fällt. Wer selbst angreift, darf vom Ziel einmal zurückbekommen; dagegen greifen keine Blauhelme ein. NPC-Mitspieler (🤖) spielen defensiv und sind faire Ziele. Gegen Spieler unter 20 % der eigenen Punkte gibt es keine Raubzüge, zwischen 20 und 50 % anteilig weniger Beute – außer sie haben zuerst angegriffen. Wer einen Raubzug verliert, produziert 12 h lang 25 % mehr. Erkundungen kosten Einsatzgeld, liefern Schätzungen und sind gegen denselben Spieler nur alle 6 h möglich; Abschirmung fängt Kuriere ab. Markt: Händler tauscht mit Verlust (besser durch Handelszentrum und Handelskunde).
 
 Gebäude:
 {$geb}
@@ -265,6 +266,7 @@ function berater_daten(int $sid): array
             'naechste_stufen' => $naechste,
             'einheiten' => $einheiten,
             'aktive_ereignisse' => array_map(fn($x) => EREIGNISSE[$x['e']['typ']]['name'] . ' (' . staerke_wort($x['s']) . ')', ereignisse_bei($b, time())),
+            'blauhelme_prozent' => blauhelme_prozent($db, $b['id'], time()),
         ];
         $bereiche[] = $eintrag;
         $schule = (int)($z['stufen']['dorfschule'] ?? 0);
@@ -289,12 +291,13 @@ function berater_daten(int $sid): array
         'bereiche_erlaubt' => max_bereiche($fo), 'bereiche_belegt' => anzahl_bereiche($db, $sid),
         'anfaengerschutz_bis' => ($bis = schutz_bis($db, $sid)) ? date('d.m. H:i', $bis) : 'vorbei',
         'verluste_letzte_stunden_prozent' => (int)round(verlust_stand($db, $sid, time())['verlust'] * 100),
-        'geschuetzt_wegen_tagesgrenze_bis' => ($bis = vollschutz_bis($db, $sid)) ? date('d.m. H:i', $bis) : 'nein',
+        'tagesgrenze_erreicht' => verlust_stand($db, $sid, time())['spielraum'] <= 0 ? 'ja – Angreifer bekommen keine Beute mehr' : 'nein',
+        'einsatzgruppen' => array_values(array_map(fn($x) => $x['zug_id'] !== null ? 'im Einsatz' : ($x['frei'] ? 'bereit' : 'Regeneration bis ' . date('d.m. H:i', $x['bereit_ab'])), einsatzgruppen($db, $sid))),
         'wiederaufbauhilfe_bis' => wiederaufbau_bis($sid) > time() ? date('d.m. H:i', wiederaufbau_bis($sid)) : 'keine',
         'laufende_forschung' => $auftrag ? (FORSCHUNG[$auftrag['typ']]['name'] ?? $auftrag['typ']) . " Stufe {$auftrag['ziel_stufe']}, fertig in " . dauer((int)$auftrag['ende_ts'] - time()) : 'keine',
         'forschung' => $forschung,
         'bereiche' => $bereiche,
-        'anrueckende_zuege' => array_map(fn($zg) => ($zg['auftrag'] === 'angriff' ? 'RAUBZUG' : AUFTRAEGE[$zg['auftrag']]) . " von {$zg['absender']}, Ankunft in " . dauer((int)$zg['ankunft_ts'] - time()), $angriffe),
+        'anrueckende_zuege' => array_map(fn($zg) => ($zg['auftrag'] === 'angriff' ? 'RAUBZUG (' . phase_text($zg) . ')' : AUFTRAEGE[$zg['auftrag']]) . " von {$zg['absender']}, nächster Schritt in " . dauer((int)$zg['ankunft_ts'] - time()), $angriffe),
     ];
 }
 

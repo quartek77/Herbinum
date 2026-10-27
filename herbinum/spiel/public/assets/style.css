@@ -1,4 +1,4 @@
-/* Herbinum – Feldmark-Grün, Klinkerrot, Wasserschloss-Blau. Version 6: Seitenleiste, Tag/Nacht, Markt, Chat, Zeitung. */
+/* Herbinum – Grün, Klinkerrot, Glas und Beton. Version 6: Seitenleiste, Tag/Nacht, Markt, Chat, Zeitung; Version 9: moderne Bereichsansicht. */
 :root {
   --ground: #dde4cf; --settle: #f1efe6; --industry: #d9d3dc; --green: #c8d9b4; --forest: #9fbf8f;
   --water: #93bfd6; --waterline: #5f9fc2; --bld: #9b8f86; --road: #ffffff; --roadcase: #b9b2a6;
@@ -8,6 +8,7 @@
   --brick: #b4523a; --brick-dark: #8e3d2b; --plaster: #f2ecdf; --beam: #4a3a30; --roof: #9a3a29; --roof-dark: #4b4a4f;
   --grass: #b7cf98; --grass-edge: #8fae74; --path: #e2cf9e; --field: #d9bf62; --field-row: #b89c3f;
   --tree: #5e8f4e; --tree-dark: #3f6b37; --asphalt: #a9a8a3;
+  --glass: #9cc3d8; --concrete: #cdcac3; --steel: #6f7780;
   --leiste: #23382f; --leiste-ink: #e6eee8; --leiste-soft: #9fb4a9; --leiste-aktiv: #f3d38a;
   --schatten: 0 1px 2px rgba(40, 35, 20, .06), 0 4px 14px rgba(40, 35, 20, .06);
   --display: "Zilla Slab", "Rockwell", Georgia, serif;
@@ -22,6 +23,7 @@
     --ink: #e4ebe5; --ink-soft: #a4b0a9; --panel: #121815; --card: #1a211d; --line: #2f3a34; --line-soft: #242d28;
     --accent: #6cc0a6; --accent-hell: #1f3530; --accent-ink: #0e1a16; --ok: #6cc070; --warn: #f0a440; --bad: #ef6b5b;
     --grass: #3b5233; --grass-edge: #2b3f26; --path: #7d6d4a; --field: #8a7a3a; --field-row: #6b5d28; --tree: #3c6a35; --tree-dark: #284a24; --asphalt: #5c5f5c;
+    --glass: #3e6278; --concrete: #63655f; --steel: #9099a2;
     --leiste: #0d1411; --leiste-ink: #dfe8e2; --leiste-soft: #7f948a; --plaster: #3a3630;
     --schatten: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25);
     color-scheme: dark;
@@ -61,6 +63,7 @@ code { font-family: var(--mono); font-size: .9em; background: var(--line-soft); 
 .kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--card); }
 .tageszeit { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: #fff3cf; color: #7a5a10; }
 .tageszeit .uhr { font-family: var(--mono); font-size: 13px; }
+.tageszeit small { font-weight: 500; font-size: 11px; opacity: .75; }
 .phase-daemmerung .tageszeit { background: #f9dcc4; color: #8a4114; }
 .phase-nacht .tageszeit { background: #22305a; color: #e2e8ff; }
 .wer { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -482,4 +485,11 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 .regeln-fair { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-soft); }
 .regeln-fair b { color: var(--ink); }
 .chip.rel-schutz { color: var(--ok); }
+/* Version 9: Phasen eines Raubzugs, Blauhelme, NPC-Mitspieler */
+.phasen { list-style: none; margin: 6px 0 2px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.phasen li { font: 600 11px/1 var(--body); padding: 4px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--panel); }
+.phasen li.vorbei { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.phasen li.aktiv { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.chip.rel-blauhelm { color: #2563eb; }
+.npc-marke { font-size: .9em; }
 @media (max-width: 640px) { .schutz-band { margin-left: 16px; margin-right: 16px; } }

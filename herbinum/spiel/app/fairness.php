@@ -1,11 +1,11 @@
 <?php
-// Fairness (Version 8): persönliche Sperre nach Raubzügen, gemeinsamer Verlustdeckel pro Opfer, Stärkeverhältnis,
-// Rückschlagrecht, Erkundungssperre. Die Formeln stehen in rules.php, das Konzept in konzepte/V8-KONZEPT-FAIRNESS.md.
+// Fairness (Version 8, in Version 9 entschärft): gemeinsamer Verlustdeckel pro Opfer, Stärkeverhältnis, Rückschlagrecht,
+// Erkundungssperre. Die Formeln stehen in rules.php, die Konzepte in konzepte/V8-KONZEPT-FAIRNESS.md und V9-KONZEPT-EINSAETZE.md.
 //
-// Zwei getrennte Regeln, damit niemand andere aussperren kann:
-//  1. Persönliche Sperre: Nur wer angegriffen hat, ist für dieses Opfer eine Zeit lang gesperrt (je nach Schaden).
-//  2. Verlustdeckel: Ein Opfer verliert im Zeitfenster höchstens VERLUST_MAX_TAG, durch einen Angriff höchstens
-//     VERLUST_MAX_ANGRIFF. Ist der Spielraum fast aufgebraucht, ist es für alle geschützt (Vollschutz).
+//  - Verlustdeckel: Ein Opfer verliert im Zeitfenster höchstens VERLUST_MAX_TAG, durch einen Angriff höchstens
+//    VERLUST_MAX_ANGRIFF – darüber hinaus gibt es keine Beute mehr. Angreifen bleibt möglich.
+//  - Seit Version 9 gibt es keine Angriffsverbote mehr: Die persönliche Sperre ersetzt der Einsatzzyklus (Einsatzgruppen),
+//    den Vollschutz ersetzen Blauhelme (einsaetze.php). Sperren aus Version 8 laufen noch aus.
 declare(strict_types=1);
 
 /** Gesamtpunkte eines Spielers (einmal je Aufruf berechnet). */
@@ -90,32 +90,27 @@ function persoenliche_sperre_bis(PDO $db, int $verteidiger, int $angreifer, ?int
 }
 
 /**
- * Bis wann kann $angreifer das Opfer nicht überfallen? (persönliche Sperre oder Vollschutz; ohne $angreifer nur Vollschutz)
- * Ein Rückschlagrecht hebt beides auf.
+ * Bis wann kann $angreifer das Opfer nicht überfallen? Seit Version 9 nur noch eine auslaufende persönliche Sperre
+ * aus Version 8; ein Rückschlagrecht hebt sie auf.
  */
 function angriffsschutz_bis(PDO $db, int $verteidiger, ?int $angreifer = null, ?int $ts = null): ?int
 {
     $ts ??= time();
-    if ($angreifer !== null && rueckschlag_aktiv($db, $verteidiger, $angreifer, $ts)) {
+    if ($angreifer === null || rueckschlag_aktiv($db, $verteidiger, $angreifer, $ts)) {
         return null;
     }
-    $bis = array_filter([$angreifer !== null ? persoenliche_sperre_bis($db, $verteidiger, $angreifer, $ts) : null, vollschutz_bis($db, $verteidiger, $ts)]);
-    return $bis ? max($bis) : null;
+    return persoenliche_sperre_bis($db, $verteidiger, $angreifer, $ts);
 }
 
 /**
  * Darf $angreifer den Spieler $verteidiger zum Zeitpunkt $ts überfallen? Gibt den Beutefaktor zurück
- * oder eine Fehlermeldung (Text) mit Grund (Sperre, Tagesgrenze, zu schwach).
+ * oder eine Fehlermeldung (Text) mit Grund (auslaufende Sperre aus Version 8, zu schwach).
+ * Eine erreichte Tagesgrenze verbietet nichts mehr – es gibt dann nur keine Beute, und Blauhelme stehen bereit.
  */
 function raubzug_erlaubt(PDO $db, int $angreifer, int $verteidiger, int $ts): float|string
 {
-    if (!rueckschlag_aktiv($db, $verteidiger, $angreifer, $ts)) {
-        if ($bis = persoenliche_sperre_bis($db, $verteidiger, $angreifer, $ts)) {
-            return 'Du hast diesen Spieler eben erst überfallen – erneut frühestens ab ' . date('d.m. H:i', $bis) . ' Uhr.';
-        }
-        if ($bis = vollschutz_bis($db, $verteidiger, $ts)) {
-            return 'Dieser Spieler hat seine Tagesgrenze an Verlusten erreicht und ist bis ' . date('d.m. H:i', $bis) . ' Uhr geschützt.';
-        }
+    if (!rueckschlag_aktiv($db, $verteidiger, $angreifer, $ts) && ($bis = persoenliche_sperre_bis($db, $verteidiger, $angreifer, $ts))) {
+        return 'Du hast diesen Spieler eben erst überfallen – erneut frühestens ab ' . date('d.m. H:i', $bis) . ' Uhr.';
     }
     if (hat_zuerst_angegriffen($db, $verteidiger, $angreifer, $ts)) {
         return 1.0;     // Gegenschlag: volle Beute, keine Stärke-Grenze
@@ -172,9 +167,9 @@ function vermoegen(PDO $db, int $sid, int $ts): float
 }
 
 /**
- * Nach einem Raubzug: Schaden protokollieren und die persönliche Sperre des Angreifers setzen.
- * Ein genutztes Rückschlagrecht ist damit verbraucht.
- * Gibt ['anteil', 'anteil_24', 'spielraum', 'sperre_bis', 'vollschutz_bis'] zurück.
+ * Nach einem Raubzug: Schaden protokollieren. Ein genutztes Rückschlagrecht ist damit verbraucht.
+ * Seit Version 9 wird keine neue persönliche Sperre mehr gesetzt (der Einsatzzyklus bremst stattdessen).
+ * Gibt ['anteil', 'anteil_24', 'spielraum', 'sperre_bis', 'vollschutz_bis'] zurück (die letzten beiden sind immer null).
  */
 function schutz_nach_raubzug(PDO $db, int $angreifer, int $verteidiger, int $ts, string $ergebnis, float $wertVorher, float $verlust): array
 {
@@ -183,15 +178,7 @@ function schutz_nach_raubzug(PDO $db, int $angreifer, int $verteidiger, int $ts,
        ->execute([$ts, $angreifer, $verteidiger, $ergebnis, $wertVorher, $verlust]);
     $db->prepare('UPDATE angriffssperre SET frei_bis_ts = 0 WHERE verteidiger_id = ? AND angreifer_id = ?')->execute([$verteidiger, $angreifer]);
     $stand = verlust_stand($db, $verteidiger, $ts);
-    if ($ergebnis === 'verteidiger') {
-        return ['anteil' => $anteil, 'anteil_24' => $stand['verlust'], 'spielraum' => $stand['spielraum'], 'sperre_bis' => null, 'vollschutz_bis' => null];
-    }
-    $bis = $ts + schutzzeit_s($anteil, staerke_r($angreifer, $verteidiger), tempo());
-    $db->prepare('INSERT INTO angriffssperre (verteidiger_id, angreifer_id, bis_ts, frei_bis_ts) VALUES (?, ?, ?, 0)
-                  ON DUPLICATE KEY UPDATE bis_ts = GREATEST(bis_ts, VALUES(bis_ts))')
-       ->execute([$verteidiger, $angreifer, $bis]);
-    return ['anteil' => $anteil, 'anteil_24' => $stand['verlust'], 'spielraum' => $stand['spielraum'],
-            'sperre_bis' => persoenliche_sperre_bis($db, $verteidiger, $angreifer, $ts), 'vollschutz_bis' => vollschutz_bis($db, $verteidiger, $ts)];
+    return ['anteil' => $anteil, 'anteil_24' => $stand['verlust'], 'spielraum' => $stand['spielraum'], 'sperre_bis' => null, 'vollschutz_bis' => null];
 }
 
 /** Ende der Erkundungssperre für $spaeher gegen $ziel oder null. */

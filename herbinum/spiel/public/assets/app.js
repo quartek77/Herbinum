@@ -42,6 +42,12 @@ function countdowns() {
     el.firstElementChild.style.width = Math.max(0, Math.min(100, (now() - a) / Math.max(1, e - a) * 100)) + "%";
   });
 }
+// Spieluhr im Kopf: läuft mit dem Spieltempo weiter
+const spieluhr = $(".uhr[data-stunde]");
+if (spieluhr) {
+  const t0 = Date.now(), h0 = +spieluhr.dataset.stunde, f = +spieluhr.dataset.faktor || 1;
+  setInterval(() => { const h = (h0 + (Date.now() - t0) / 3600000 * f) % 24; spieluhr.textContent = `${Math.floor(h)}:${String(Math.floor(h % 1 * 60)).padStart(2, "0")}`; }, 5000);
+}
 if (ticker.length || document.querySelector("[data-ende]")) { tick(); countdowns(); setInterval(() => { tick(); countdowns(); }, 1000); }
 
 // =====================================================================
@@ -50,7 +56,9 @@ if (ticker.length || document.querySelector("[data-ende]")) { tick(); countdowns
 const BAUPLAN = ["hofstelle", "holzplatz", "acker", "windrad", "ziegelei", "scheune", "wohnhaus", "gasthof", "markt", "dorfschule", "werkstatt", "schuetzenhalle"];
 // Diese Gebäude breiten sich mit steigender Stufe über weitere Parzellen aus
 const AUSBREITEN = { holzplatz: 4, acker: 4, windrad: 3, wohnhaus: 3 };
-const SLOTS_MAX = 32;
+// Gebäude, die später dazukamen, bekommen Parzellen hinter allen anderen – so verschiebt sich nichts
+const SONDERPLATZ = { kommandozentrale: 32 };
+const SLOTS_MAX = 33;
 
 function pip(x, y, rings) { let c = false; for (const r of rings) for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) { const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
 function segDist(px, py, c) { let m = 1e9; for (let i = 0; i + 3 < c.length; i += 2) { const ax = c[i], ay = c[i + 1], dx = c[i + 2] - ax, dy = c[i + 3] - ay; const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1))); m = Math.min(m, Math.hypot(px - ax - t * dx, py - ay - t * dy)); } return m; }
@@ -78,6 +86,7 @@ function belegung(stufen) {
     const L = stufen[typ] || 0, n = Math.min(6, 1 + Math.floor((L - 1) / AUSBREITEN[typ]));
     if (L && k < n) out.push({ typ, lvl: Math.max(1, L - k * AUSBREITEN[typ]), slot: BAUPLAN.length + (k - 1) * spread.length + j });
   });
+  Object.entries(SONDERPLATZ).forEach(([typ, slot]) => { if (stufen[typ]) out.push({ typ, lvl: stufen[typ], slot }); });
   return out;
 }
 
@@ -93,7 +102,7 @@ async function isoAnsicht(cv) {
   // Ausschnitt: alle Parzellen bis zur jeweils höchsten belegten plus Rand
   const sichtbar = plots.slice(0, Math.max(10, ...teile.map(t => t.slot + 1)));
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
-  const M = /wallhecke|hochsitz/.test(cv.dataset.einheiten || "") || stufen.graben ? 66 : 50;  // Platz für Hecken und Wachtürme
+  const M = /wallhecke|hochsitz/.test(cv.dataset.einheiten || "") || stufen.graben ? 66 : 50;  // Platz für Barrikaden und Wachtürme
   sichtbar.forEach(p => [[-M, -M], [M, -M], [M, M], [-M, M]].forEach(([dx, dy]) => {
     const u = p.x + dx - ox, v = p.y + dy - oy, X = (u - v) * C, Y = (u + v) * Sn;
     minX = Math.min(minX, X); maxX = Math.max(maxX, X); minY = Math.min(minY, Y); maxY = Math.max(maxY, Y);
@@ -127,20 +136,28 @@ async function isoAnsicht(cv) {
     const r0 = P(x, y + d / 2, h + rh), r1 = P(x + w, y + d / 2, h + rh);
     quad([P(x, y, h), P(x + w, y, h), r1, r0], c2); quad([P(x + w, y, h), P(x + w, y + d, h), r1], gc); quad([P(x, y + d, h), P(x + w, y + d, h), r1, r0], c1);
   }
-  function house(x, y, w, d, h, lvl, opt = {}) {
-    const klinker = lvl >= 4 || opt.klinker;
-    const wall = klinker ? css("--brick") : css("--plaster"), wall2 = klinker ? css("--brick-dark") : shade(css("--plaster"), -.12);
-    box(x, y, w, d, h, wall, wall, wall2);
-    if (!klinker) {
-      ctx.strokeStyle = css("--beam"); ctx.lineWidth = Math.max(.6, s * .5);
-      for (let k = 0; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(...P(x + w * k / 3, y + d, 0)); ctx.lineTo(...P(x + w * k / 3, y + d, h)); ctx.stroke(); }
-      ctx.beginPath(); ctx.moveTo(...P(x, y + d, h * .55)); ctx.lineTo(...P(x + w, y + d, h * .55)); ctx.stroke();
+  // Fensterbänder auf den beiden sichtbaren Fassaden (vorne: y + d, rechts: x + w)
+  function fenster(x, y, w, d, h, farbe) {
+    const etagen = Math.max(1, Math.round(h / 3.4));
+    for (let e = 0; e < etagen; e++) {
+      const z0 = h * (e + .32) / etagen, z1 = z0 + h * .42 / etagen;
+      for (let u = 1; u + 2.2 <= w - .6; u += 3.2) quad([P(x + u, y + d, z0), P(x + u + 2.2, y + d, z0), P(x + u + 2.2, y + d, z1), P(x + u, y + d, z1)], farbe);
+      for (let v = 1; v + 2.2 <= d - .6; v += 3.2) quad([P(x + w, y + v, z0), P(x + w, y + v + 2.2, z0), P(x + w, y + v + 2.2, z1), P(x + w, y + v, z1)], shade(farbe, -.18));
     }
-    ctx.fillStyle = shade(css("--water"), -.25);
-    const nw = Math.max(1, Math.floor(w / 5));
-    for (let k = 0; k < nw; k++) { const p = P(x + (k + .5) * w / nw, y + d, h * .45); ctx.fillRect(p[0] - s * .9, p[1] - s * 1.6, s * 1.8, s * 1.6); }
-    const roof = opt.roof || (klinker ? css("--roof-dark") : css("--roof"));
-    gable(x, y, w, d, h, opt.rh ?? Math.min(w, d) * .55, roof, shade(roof, -.18), wall2);
+  }
+  // Moderner Baukörper: Flachdach mit Attika und Fensterbändern
+  function block(x, y, w, d, h, opt = {}) {
+    const wand = opt.wand || css("--plaster");
+    box(x, y, w, d, h, css("--concrete"), wand, shade(wand, -.14));
+    const i = Math.min(.8, w / 6, d / 6);
+    quad([P(x + i, y + i, h), P(x + w - i, y + i, h), P(x + w - i, y + d - i, h), P(x + i, y + d - i, h)], opt.dach || shade(css("--concrete"), -.2));
+    if (opt.fenster !== false) fenster(x, y, w, d, h, opt.glas || css("--glass"));
+  }
+  // Mast mit Warnlicht (blinkt)
+  function antenne(x, y, z, hoch, sec, licht = "#e5484d") {
+    const a = P(x, y, z), b = P(x, y, z + hoch);
+    ctx.strokeStyle = css("--steel"); ctx.lineWidth = Math.max(1, s * .5); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+    ctx.fillStyle = reduceMotion || Math.sin(sec * 4) > 0 ? licht : shade(licht, -.55); ctx.beginPath(); ctx.arc(b[0], b[1], 1.1 * s, 0, 7); ctx.fill();
   }
   function tree(x, y, k) {
     const base = P(x, y), top = P(x, y, 7 * k);
@@ -148,11 +165,12 @@ async function isoAnsicht(cv) {
     ctx.fillStyle = css("--tree-dark"); ctx.beginPath(); ctx.ellipse(top[0], top[1], 4.4 * k * s, 4.8 * k * s, 0, 0, 7); ctx.fill();
     ctx.fillStyle = css("--tree"); ctx.beginPath(); ctx.ellipse(top[0] - k * s, top[1] - k * s, 3.2 * k * s, 3.4 * k * s, 0, 0, 7); ctx.fill();
   }
-  function field(x, y, sz, lvl) {
-    quad([P(x, y), P(x + sz, y), P(x + sz, y + sz), P(x, y + sz)], css("--field"));
-    ctx.strokeStyle = css("--field-row"); ctx.lineWidth = Math.max(.6, s * .5);
-    const rows = 4 + Math.min(lvl, 8);
-    for (let k = 1; k < rows; k++) { ctx.beginPath(); ctx.moveTo(...P(x + sz * k / rows, y)); ctx.lineTo(...P(x + sz * k / rows, y + sz)); ctx.stroke(); }
+  // Glashaus mit Satteldach aus Glas, innen grün
+  function glashaus(x, y, w, d, h) {
+    const g = css("--glass");
+    box(x, y, w, d, h, g, shade(g, .1), shade(g, -.08));
+    ctx.fillStyle = css("--tree"); for (let k = 1; k < 4; k++) { const p = P(x + w * k / 4, y + d, h * .35); ctx.fillRect(p[0] - s, p[1] - s, 2 * s, 1.4 * s); }
+    gable(x, y, w, d, h, 2.4, shade(g, .18), shade(g, .05), shade(g, -.05));
   }
   function geruest(cx, cy) {
     ctx.strokeStyle = css("--warn") || "#b45309"; ctx.lineWidth = Math.max(1, s * .6); ctx.setLineDash([3, 2]);
@@ -164,28 +182,30 @@ async function isoAnsicht(cv) {
   function gebaeude(t, cx, cy, sec) {
     const L = Math.min(t.lvl, 12), g = 1 + L * 0.07;
     switch (t.typ) {
-      case "hofstelle": {
-        const w = 13 * g, d = 9 * g, h = 5 + L * .6;
-        house(cx - w / 2, cy - d / 2, w, d, h, L, { rh: d * .7 });
-        if (L >= 5) house(cx - w / 2 - 7, cy + d / 2 - 2, 7, 10, h * .8, L);
-        if (L >= 8) box(cx + w / 2 - 3, cy - d / 2 - 3, 4, 4, h + 9, css("--roof-dark"), css("--brick"), css("--brick-dark"));
+      case "hofstelle": {   // Zentrale: Bürogebäude, ab Stufe 5 mit Anbau, ab Stufe 8 mit Funkmast
+        const w = 13 * g, d = 9 * g, h = 6 + L * .9;
+        if (L >= 5) block(cx - w / 2 - 7, cy + d / 2 - 6, 7, 9, h * .5, { wand: css("--concrete") });
+        block(cx - w / 2, cy - d / 2, w, d, h);
+        if (L >= 8) antenne(cx + w / 2 - 2, cy - d / 2 + 2, h, 9, sec);
         break;
       }
-      case "holzplatz":
+      case "holzplatz":   // Sägewerk: Halle und Stapel
+        block(cx - 7, cy - 10, 11, 7, 4, { wand: shade(css("--beam"), .55), fenster: false });
         for (let k = 0; k < Math.min(6, 1 + Math.ceil(L / 2)); k++) box(cx - 9 + (k % 3) * 5.5, cy + 2 + Math.floor(k / 3) * 4.5, 5, 3.6, 2.4 + (k % 2), shade(css("--beam"), .55), shade(css("--beam"), .3), shade(css("--beam"), .15));
-        house(cx - 6, cy - 9, 9, 7, 3.5, 1, { roof: css("--roof-dark") });
         break;
-      case "ziegelei": {
-        house(cx - 9, cy - 6, 14 * g, 9, 4 + L * .3, 5);
-        const ch = 12 + L * 1.6; box(cx + 6, cy - 3, 3, 3, ch, css("--brick-dark"), css("--brick"), css("--brick-dark"));
-        if (!reduceMotion) { const top = P(cx + 7.5, cy - 1.5, ch); for (let k = 0; k < 3; k++) { const ph = (sec * .5 + k / 3) % 1; ctx.fillStyle = `rgba(160,160,160,${.45 * (1 - ph)})`; ctx.beginPath(); ctx.arc(top[0] + ph * 10 * s, top[1] - ph * 16 * s, (2 + ph * 4) * s, 0, 7); ctx.fill(); } }
+      case "ziegelei": {   // Baustoffwerk: Werkshalle, Silo und Schornstein
+        block(cx - 9, cy - 6, 14 * g, 9, 4 + L * .3, { wand: css("--concrete"), fenster: false });
+        box(cx - 12, cy - 4, 3, 3, 7 + L * .5, css("--steel"), shade(css("--steel"), .25), css("--steel"));
+        const ch = 12 + L * 1.6; box(cx + 6, cy - 3, 3, 3, ch, css("--steel"), shade(css("--steel"), .2), shade(css("--steel"), -.1));
+        if (!reduceMotion) { const top = P(cx + 7.5, cy - 1.5, ch); for (let k = 0; k < 3; k++) { const ph = (sec * .5 + k / 3) % 1; ctx.fillStyle = `rgba(200,200,200,${.4 * (1 - ph)})`; ctx.beginPath(); ctx.arc(top[0] + ph * 10 * s, top[1] - ph * 16 * s, (2 + ph * 4) * s, 0, 7); ctx.fill(); } }
         break;
       }
-      case "acker":
-        field(cx - 15, cy - 15, 30, L);
-        if (L >= 3) house(cx - 14, cy - 14, 8, 6, 3.2, L, { roof: css("--roof") });
-        if (L >= 6) box(cx + 8, cy - 14, 4.5, 4.5, 11, css("--asphalt"), shade(css("--asphalt"), .25), shade(css("--asphalt"), -.1));
+      case "acker": {   // Gewächshaus: Glashäuser, mehr mit jeder Stufe, ab Stufe 6 ein Tank
+        const n = Math.min(4, 1 + Math.floor(L / 2));
+        for (let k = 0; k < n; k++) glashaus(cx - 15 + (k % 2) * 15.5, cy - 15 + Math.floor(k / 2) * 15.5, 13, 12, 3);
+        if (L >= 6) box(cx + 13, cy + 13, 3.5, 3.5, 9, css("--steel"), shade(css("--steel"), .25), css("--steel"));
         break;
+      }
       case "windrad": {
         const hh = 24 + L * 3, base = P(cx, cy), hub = P(cx, cy, hh);
         ctx.strokeStyle = shade(css("--panel"), -.05); ctx.lineWidth = Math.max(1.5, 1.6 * s); ctx.beginPath(); ctx.moveTo(...base); ctx.lineTo(...hub); ctx.stroke();
@@ -196,13 +216,57 @@ async function isoAnsicht(cv) {
         ctx.fillStyle = css("--ink-soft"); ctx.beginPath(); ctx.arc(hub[0], hub[1], 1.4 * s, 0, 7); ctx.fill();
         break;
       }
-      case "scheune": house(cx - 9 * g, cy - 6, 18 * g, 12, 5 + L * .4, 1, { roof: css("--roof-dark"), rh: 8 }); break;
-      case "wohnhaus": house(cx - 5.5, cy - 4.5, 11, 9, 4.2 + Math.min(L, 6) * .5, L); if (L >= 3) house(cx + 1, cy + 1, 7, 7, 4, L); break;
-      case "dorfschule": house(cx - 9, cy - 5, 16, 10, 5.5, Math.max(L, 4)); box(cx + 3, cy - 3, 3, 3, 12, css("--roof-dark"), css("--plaster"), shade(css("--plaster"), -.12)); break;
-      case "gasthof": { house(cx - 7, cy - 6, 13, 10, 5, L, { roof: css("--roof") }); const p = P(cx + 7, cy + 4, 6); ctx.fillStyle = css("--field"); ctx.fillRect(p[0], p[1], 4 * s, 3 * s); break; }
-      case "werkstatt": { box(cx - 9, cy - 7, 18, 13, 5 + L * .3, css("--asphalt"), shade(css("--asphalt"), .15), shade(css("--asphalt"), -.15)); const p = P(cx - 3, cy + 6, 0); ctx.fillStyle = css("--beam"); ctx.fillRect(p[0], p[1] - 4 * s, 6 * s, 4 * s); box(cx + 4, cy + 8, 4, 2.5, 2.4, css("--ok"), css("--ok"), shade(css("--ok"), -.2)); break; }
-      case "schuetzenhalle": { house(cx - 11, cy - 5, 20, 10, 5, Math.max(L, 4), { roof: css("--roof-dark") }); const b0 = P(cx + 11, cy - 5), b1 = P(cx + 11, cy - 5, 20); ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...b0); ctx.lineTo(...b1); ctx.stroke(); const wv = reduceMotion ? 0 : Math.sin(sec * 3) * 1.5; ctx.fillStyle = css("--ok"); ctx.beginPath(); ctx.moveTo(...b1); ctx.lineTo(b1[0] + 8 * s, b1[1] + 2 * s + wv); ctx.lineTo(b1[0], b1[1] + 5 * s); ctx.fill(); break; }
-      case "markt": { const cols = ["--bad", "--warn", "--accent", "--ok"]; for (let k = 0; k < Math.min(4, 1 + L); k++) { const xx = cx - 10 + (k % 2) * 11, yy = cy - 8 + Math.floor(k / 2) * 10; box(xx, yy, 7, 6, 2.5, css("--plaster"), css("--plaster"), shade(css("--plaster"), -.1)); gable(xx, yy, 7, 6, 3.5, 2, css(cols[k]), shade(css(cols[k]), -.2), css(cols[k])); } break; }
+      case "scheune": {   // Lagerhalle: Blechhalle mit Rolltoren
+        const w = 18 * g, h = 4.5 + L * .4;
+        block(cx - 9 * g, cy - 6, w, 12, h, { wand: shade(css("--steel"), .5), fenster: false });
+        for (let k = 0; k < Math.min(4, 1 + Math.floor(L / 3)); k++) { const u = cx - 9 * g + 1.5 + k * 4.5; quad([P(u, cy + 6, 0), P(u + 3.4, cy + 6, 0), P(u + 3.4, cy + 6, h * .7), P(u, cy + 6, h * .7)], css("--steel")); }
+        break;
+      }
+      case "wohnhaus": {   // Wohnviertel: Wohnblöcke, höher mit jeder Stufe
+        const h = 4 + Math.min(L, 8) * 1.4, wand = L >= 4 ? css("--brick") : css("--plaster");
+        block(cx - 5.5, cy - 4.5, 11, 9, h, { wand });
+        if (L >= 3) block(cx + 1, cy + 3, 7, 7, h * .65, { wand: L >= 6 ? css("--plaster") : wand });
+        break;
+      }
+      case "dorfschule": {   // Forschungszentrum: Glasbau mit Parabolantenne
+        block(cx - 9, cy - 5, 16, 10, 6 + L * .3, { wand: shade(css("--glass"), .45), glas: shade(css("--glass"), -.1) });
+        const p = P(cx + 3, cy - 1, 6 + L * .3 + 2.5);
+        ctx.fillStyle = css("--panel"); ctx.strokeStyle = css("--steel"); ctx.lineWidth = Math.max(.8, s * .4);
+        ctx.beginPath(); ctx.ellipse(p[0], p[1], 3.2 * s, 2 * s, -.5, 0, 7); ctx.fill(); ctx.stroke();
+        break;
+      }
+      case "gasthof": {   // Gastronomie: Gebäude mit Terrasse und Sonnenschirmen
+        block(cx - 7, cy - 6, 13, 10, 4.5, { wand: css("--brick") });
+        ["--warn", "--accent", "--bad"].slice(0, Math.min(3, 1 + Math.floor(L / 2))).forEach((c, k) => {
+          const st = P(cx + 8, cy - 4 + k * 5, 0), p = P(cx + 8, cy - 4 + k * 5, 4);
+          ctx.strokeStyle = css("--steel"); ctx.lineWidth = Math.max(.8, s * .4); ctx.beginPath(); ctx.moveTo(...st); ctx.lineTo(...p); ctx.stroke();
+          ctx.fillStyle = css(c); ctx.beginPath(); ctx.ellipse(p[0], p[1], 3 * s, 1.5 * s, 0, 0, 7); ctx.fill();
+        });
+        break;
+      }
+      case "werkstatt": { box(cx - 9, cy - 7, 18, 13, 5 + L * .3, css("--asphalt"), shade(css("--asphalt"), .15), shade(css("--asphalt"), -.15)); const p = P(cx - 3, cy + 6, 0); ctx.fillStyle = css("--steel"); ctx.fillRect(p[0], p[1] - 4 * s, 6 * s, 4 * s); box(cx + 4, cy + 8, 4, 2.5, 2.4, css("--ok"), css("--ok"), shade(css("--ok"), -.2)); if (L >= 4) box(cx - 8, cy + 8, 4, 2.5, 2.4, css("--accent"), css("--accent"), shade(css("--accent"), -.2)); break; }
+      case "schuetzenhalle": {   // Sicherheitszentrale: Leitstelle mit Funkmast und Blaulicht
+        const h = 5 + L * .3;
+        block(cx - 11, cy - 5, 20, 10, h, { wand: shade(css("--steel"), .4) });
+        quad([P(cx - 11, cy + 5, h * .9), P(cx + 9, cy + 5, h * .9), P(cx + 9, cy + 5, h * .78), P(cx - 11, cy + 5, h * .78)], "#2f6fd6");
+        antenne(cx + 7, cy - 3, h, 12, sec, "#3b82f6");
+        break;
+      }
+      case "kommandozentrale": {   // Kommandozentrale: dunkler Glasturm mit Antennen und Satellitenschüssel
+        const h = 10 + L * 3;
+        block(cx - 7, cy - 7, 14, 14, h, { wand: shade(css("--steel"), .15), glas: shade(css("--glass"), .2) });
+        antenne(cx - 4, cy - 4, h, 8, sec); antenne(cx + 4, cy - 4, h, 5, sec + 1, "#3b82f6");
+        const p = P(cx + 2, cy + 3, h + 2);
+        ctx.fillStyle = css("--panel"); ctx.strokeStyle = css("--steel"); ctx.lineWidth = Math.max(.8, s * .4);
+        ctx.beginPath(); ctx.ellipse(p[0], p[1], 2.6 * s, 1.6 * s, .4, 0, 7); ctx.fill(); ctx.stroke();
+        break;
+      }
+      case "markt": {   // Handelszentrum: Einkaufszentrum mit farbigem Vordach
+        const h = 4 + Math.min(L, 6) * .6, cols = ["--bad", "--warn", "--accent", "--ok"];
+        block(cx - 11, cy - 8, 22, 15, h);
+        for (let k = 0; k < 4; k++) quad([P(cx - 11 + k * 5.5, cy + 7, h * .62), P(cx - 5.5 + k * 5.5, cy + 7, h * .62), P(cx - 5.5 + k * 5.5, cy + 9, h * .5), P(cx - 11 + k * 5.5, cy + 9, h * .5)], css(cols[k]));
+        break;
+      }
     }
   }
   const linie = (p, w, col) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) { const q = P(p[i], p[i + 1]); i ? ctx.lineTo(...q) : ctx.moveTo(...q); } ctx.strokeStyle = col; ctx.lineWidth = w * s; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); };
@@ -217,17 +281,18 @@ async function isoAnsicht(cv) {
     D.water.forEach(([c, , p]) => linie(p, c === 1 ? 9 : 3.5, css("--waterline")));
     const RW = { 1: 20, 2: 11, 3: 9, 4: 8, 5: 6 };
     D.roads.forEach(([c, , p]) => linie(p, RW[c], css("--asphalt")));
-    // Schutzwall um die Hofanlage, Breite wächst mit der Stufe
+    // Schutzwall: Betonmauer um die Anlage, höher mit jeder Stufe; vorne eine Schranke
     if (graben && ring) {
-      const r = rechteck(ring, 14);
-      ctx.beginPath(); r.forEach(([x, y], i) => i ? ctx.lineTo(...P(x, y)) : ctx.moveTo(...P(x, y))); ctx.closePath();
-      ctx.strokeStyle = css("--waterline"); ctx.lineWidth = (4 + graben * 1.5) * s; ctx.lineJoin = "round"; ctx.stroke();
-      ctx.strokeStyle = css("--water"); ctx.lineWidth = (2 + graben * 1.2) * s; ctx.stroke();
-      const br = [(r[2][0] + r[3][0]) / 2, r[2][1]];   // Brücke auf der Vorderseite
-      ctx.strokeStyle = css("--beam"); ctx.lineWidth = 5 * s; ctx.lineCap = "butt";
-      ctx.beginPath(); ctx.moveTo(...P(br[0], br[1] - 5 - graben)); ctx.lineTo(...P(br[0], br[1] + 5 + graben)); ctx.stroke();
+      const r = rechteck(ring, 14), hm = 1.5 + graben * .6;
+      const pfad = z => { ctx.beginPath(); r.forEach(([x, y], i) => i ? ctx.lineTo(...P(x, y, z)) : ctx.moveTo(...P(x, y, z))); ctx.closePath(); };
+      ctx.lineJoin = "round"; ctx.lineCap = "butt";
+      for (let z = 0; z <= hm; z += .5) { pfad(z); ctx.strokeStyle = shade(css("--concrete"), z + .5 > hm ? .1 : -.25); ctx.lineWidth = (z + .5 > hm ? 1.6 : 2.2) * s; ctx.stroke(); }
+      const br = [(r[2][0] + r[3][0]) / 2, r[2][1]];
+      ctx.lineWidth = 1.4 * s; ctx.setLineDash([2 * s, 2 * s]);
+      ctx.strokeStyle = "#e5484d"; ctx.beginPath(); ctx.moveTo(...P(br[0] - 6, br[1], hm + .5)); ctx.lineTo(...P(br[0] + 6, br[1], hm + .5)); ctx.stroke();
+      ctx.strokeStyle = "#ffffff"; ctx.lineDashOffset = 2 * s; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
     }
-    // Pättkes zwischen den Gebäuden
+    // Wege zwischen den Gebäuden
     ctx.strokeStyle = css("--path"); ctx.lineWidth = 4 * s; ctx.lineCap = "round";
     const gebaut = teile.map(t => plots[t.slot]);
     gebaut.forEach((p, i) => { if (!i) return; let best = gebaut[0], bd = 1e9; for (let j = 0; j < i; j++) { const q = gebaut[j], dd = Math.hypot(p.x - q.x, p.y - q.y); if (dd < bd) { bd = dd; best = q; } } ctx.beginPath(); ctx.moveTo(...P(p.x, p.y)); ctx.lineTo(...P(p.x, best.y)); ctx.lineTo(...P(best.x, best.y)); ctx.stroke(); });
@@ -237,7 +302,7 @@ async function isoAnsicht(cv) {
     ctx.setLineDash([]);
     const items = trees.map(tr => ({ d: tr.x + tr.y, f: () => tree(tr.x, tr.y, tr.s) }));
     teile.forEach(t => { const p = plots[t.slot]; items.push({ d: p.x + p.y, f: () => gebaeude(t, p.x, p.y, sec) }); });
-    if (baut) { const slot = BAUPLAN.indexOf(baut), p = plots[slot]; if (p) items.push({ d: p.x + p.y + .1, f: () => geruest(p.x, p.y) }); }
+    if (baut) { const slot = BAUPLAN.includes(baut) ? BAUPLAN.indexOf(baut) : SONDERPLATZ[baut] ?? -1, p = plots[slot]; if (p) items.push({ d: p.x + p.y + .1, f: () => geruest(p.x, p.y) }); }
     verteidigung.forEach(v => items.push(v));
     items.sort((a, c) => a.d - c.d).forEach(it => it.f());
     ctx.restore();
@@ -259,18 +324,32 @@ async function isoAnsicht(cv) {
     for (const [a, b, l] of seg) { if (rest <= l) { const f = rest / l; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; } rest -= l; }
     return ecken[0];
   }
-  function heckenstueck(x, y) {
-    for (let k = -1; k <= 1; k++) {
-      const p = P(x + k * 3, y - k * 3, 2.5);
-      ctx.fillStyle = css("--tree-dark"); ctx.beginPath(); ctx.ellipse(p[0], p[1], 3.2 * s, 2.6 * s, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = css("--tree"); ctx.beginPath(); ctx.ellipse(p[0] - .8 * s, p[1] - .8 * s, 2 * s, 1.6 * s, 0, 0, 7); ctx.fill();
+  // Barrikade: Betonleitwand mit rot-weißer Markierung, jedes fünfte Stück ein Container
+  function barrikade(x, y, quer, i) {
+    if (i % 5 === 4) {
+      const c = ["#c2410c", "#1d4ed8", "#15803d"][(i / 5 | 0) % 3];
+      if (quer) box(x - 5, y - 2, 10, 4, 4, shade(c, .15), c, shade(c, -.25)); else box(x - 2, y - 5, 4, 10, 4, shade(c, .15), c, shade(c, -.25));
+      return;
     }
+    const b = css("--concrete");
+    if (quer) box(x - 4.5, y - 1, 9, 2, 1.8, shade(b, .15), b, shade(b, -.2)); else box(x - 1, y - 4.5, 2, 9, 1.8, shade(b, .15), b, shade(b, -.2));
+    const band = quer ? [P(x - 4.5, y + 1, 1.1), P(x + 4.5, y + 1, 1.1), P(x + 4.5, y + 1, .7), P(x - 4.5, y + 1, .7)] : [P(x + 1, y - 4.5, 1.1), P(x + 1, y + 4.5, 1.1), P(x + 1, y + 4.5, .7), P(x + 1, y - 4.5, .7)];
+    quad(band, i % 2 ? "#e5484d" : "#f5f5f5");
   }
-  function hochsitz(x, y) {
-    ctx.strokeStyle = css("--beam"); ctx.lineWidth = Math.max(1, s * .6);
-    [[-2, -2], [2, -2], [2, 2], [-2, 2]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.moveTo(...P(x + dx, y + dy)); ctx.lineTo(...P(x + dx * .6, y + dy * .6, 11)); ctx.stroke(); });
-    box(x - 2.4, y - 2.4, 4.8, 4.8, 3, shade(css("--beam"), .35), shade(css("--beam"), .2), css("--beam"), 11);
-    gable(x - 2.6, y - 2.6, 5.2, 5.2, 14, 2, css("--roof-dark"), shade(css("--roof-dark"), -.2), css("--beam"));
+  // Wachturm: Stahlgerüst, verglaste Kanzel und Scheinwerfer (nachts mit Lichtkegel)
+  function wachturm(x, y) {
+    const hz = 12;
+    ctx.strokeStyle = css("--steel"); ctx.lineWidth = Math.max(1, s * .6);
+    [[-2.2, -2.2], [2.2, -2.2], [2.2, 2.2], [-2.2, 2.2]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.moveTo(...P(x + dx, y + dy)); ctx.lineTo(...P(x + dx * .7, y + dy * .7, hz)); ctx.stroke(); });
+    ctx.lineWidth = Math.max(.6, s * .3); ctx.beginPath(); ctx.moveTo(...P(x - 2.2, y + 2.2)); ctx.lineTo(...P(x + 1.5, y + 1.5, hz * .6)); ctx.moveTo(...P(x + 2.2, y + 2.2)); ctx.lineTo(...P(x - 1.5, y + 1.5, hz * .6)); ctx.stroke();
+    const g = css("--glass");
+    box(x - 2.6, y - 2.6, 5.2, 5.2, 3, css("--steel"), g, shade(g, -.2), hz);
+    box(x - 3, y - 3, 6, 6, .5, shade(css("--steel"), -.2), css("--steel"), shade(css("--steel"), -.25), hz + 3);
+    const sw = P(x + 2.6, y + 2.6, hz + 3.3);
+    if (document.body.classList.contains("phase-nacht")) {
+      ctx.fillStyle = "rgba(255, 236, 160, .22)"; ctx.beginPath(); ctx.moveTo(...sw); ctx.lineTo(...P(x + 16, y + 10)); ctx.lineTo(...P(x + 10, y + 16)); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = "#fde68a"; ctx.beginPath(); ctx.arc(sw[0], sw[1], 1 * s, 0, 7); ctx.fill();
   }
   const verteidigung = [];
   if (ring) {
@@ -279,8 +358,12 @@ async function isoAnsicht(cv) {
     const lang = 2 * ((ring.x1 - ring.x0) + (ring.y1 - ring.y0) + 112);
     // jede Barrikade ist ein Stück von ca. 10 m; bei vielen schließt sich der Ring
     const stuecke = Math.min(Math.floor(lang / 10), hecken);
-    for (let i = 0; i < stuecke; i++) { const [x, y] = umfang(heckenRing, (i + .5) / Math.max(stuecke, Math.floor(lang / 10))); verteidigung.push({ d: x + y, f: () => heckenstueck(x, y) }); }
-    for (let i = 0; i < sitze; i++) { const [x, y] = umfang(rechteck(ring, 36), i / sitze); verteidigung.push({ d: x + y, f: () => hochsitz(x, y) }); }
+    for (let i = 0; i < stuecke; i++) {
+      const t = (i + .5) / Math.max(stuecke, Math.floor(lang / 10)), [x, y] = umfang(heckenRing, t), [x2, y2] = umfang(heckenRing, Math.min(1, t + .002));
+      const quer = Math.abs(x2 - x) >= Math.abs(y2 - y);
+      verteidigung.push({ d: x + y, f: () => barrikade(x, y, quer, i) });
+    }
+    for (let i = 0; i < sitze; i++) { const [x, y] = umfang(rechteck(ring, 36), i / sitze); verteidigung.push({ d: x + y, f: () => wachturm(x, y) }); }
   }
 
   size(); draw(performance.now());
@@ -423,8 +506,20 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
   const start = JSON.parse(f.dataset.start), koord = JSON.parse(f.dataset.koord), E = JSON.parse(f.dataset.einheiten);
   const tempo = +f.dataset.tempo, umweg = +f.dataset.umweg, minKm = +f.dataset.min, faktor = +f.dataset.faktor || 1;
   const out = document.getElementById("vorschau");
+  const plaetzeJe = +f.dataset.plaetze || 10, ruest = JSON.parse(f.dataset.ruesten || "[30,2,120,1]"), spaeh = +f.dataset.spaehen || 600;
+  const gefecht = JSON.parse(f.dataset.gefecht || "[20,120]"), gruppeFrei = f.dataset.gruppeFrei === "1";
   const fmt = n => Math.floor(n).toLocaleString("de-DE");
   const dauer = s => { s = Math.max(10, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h} h ${m} min` : `${m} min ${s % 60} s`; };
+  // Wer sitzt im Mannschaftstransporter? Die Langsamsten steigen zuerst ein (wie zug_sitzplaetze in rules.php).
+  function sitzen(n) {
+    let frei = Math.floor((n.mannschaftswagen || 0) * plaetzeJe);
+    const s = {};
+    Object.keys(n).filter(t => E[t].platz > 0).sort((a, b) => E[a].kmh - E[b].kmh).forEach(t => {
+      const k = Math.min(n[t], Math.floor(frei / E[t].platz));
+      if (k > 0) { s[t] = k; frei -= k * E[t].platz; }
+    });
+    return s;
+  }
   function rechne() {
     const ziel = f.ziel.value, auftrag = (f.querySelector("[name=auftrag]:checked") || {}).value;
     const n = {}; f.querySelectorAll("[data-einheit]").forEach(i => { const v = Math.max(0, +i.value || 0); if (v) n[i.dataset.einheit] = v; });
@@ -432,13 +527,25 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
     if (!ziel || !typen.length) { out.textContent = "Ziel und Einheiten wählen."; return; }
     const [zx, zy] = koord[ziel];
     const km = Math.max(minKm, Math.hypot(zx - start[0], zy - start[1]) / 1000 * umweg);
-    const kmh = Math.min(...typen.map(t => E[t].kmh));
+    const s = sitzen(n), laufen = typen.filter(t => n[t] > (s[t] || 0));
+    const kmh = laufen.length ? Math.min(...laufen.map(t => E[t].kmh)) : 1;
     const sek = km / kmh * 3600 / tempo * faktor;
     const einfach = auftrag === "verlegen" || auftrag === "kolonisieren";
-    const korn = Math.ceil(typen.reduce((s, t) => s + E[t].korn_km * n[t] * km, 0) * (einfach ? 1 : 2));
-    const kap = typen.reduce((s, t) => s + E[t].ladung * n[t], 0);
+    const korn = Math.ceil(typen.reduce((x, t) => x + E[t].korn_km * n[t] * km, 0) * (einfach ? 1 : 2));
+    const kap = typen.reduce((x, t) => x + E[t].ladung * n[t], 0);
     let last = 0; f.querySelectorAll("[data-ladung]").forEach(i => last += Math.max(0, +i.value || 0));
-    out.innerHTML = `Strecke ${km.toFixed(1).replace(".", ",")} km · ${fmt(kmh)} km/h<br>Hinfahrt ${dauer(sek)}${einfach ? "" : ` · zurück nach ${dauer(sek * 2)}`}<br>` +
+    const zuFuss = laufen.filter(t => E[t].platz > 0).map(t => `${n[t] - (s[t] || 0)} × ${E[t].name}`);
+    const transport = Object.keys(s).length || n.mannschaftswagen
+      ? `<br>Im Mannschaftstransporter: ${Object.keys(s).map(t => `${s[t]} × ${E[t].name}`).join(", ") || "niemand"}${zuFuss.length ? ` · <span class="warn">zu Fuß: ${zuFuss.join(", ")}</span>` : ""}` : "";
+    let ablauf = "";
+    if (auftrag === "angriff") {
+      const anzahl = typen.reduce((x, t) => x + n[t], 0);
+      const r = Math.min(ruest[2], ruest[0] + ruest[1] * Math.floor(anzahl / 20)) * ruest[3] * 60 / tempo;
+      ablauf = `<br>Rüsten ${dauer(r)} → Anmarsch ${dauer(sek)} → Spähen ${dauer(spaeh)} → Gefecht ${Math.round(gefecht[0] / tempo)}–${Math.round(gefecht[1] / tempo)} min → Plündern → Rückmarsch ${dauer(sek)}, danach Regeneration` +
+        (gruppeFrei ? "" : `<br><span class="warn">Keine Einsatzgruppe frei – siehe Einsatzgruppen.</span>`);
+    }
+    out.innerHTML = `Strecke ${km.toFixed(1).replace(".", ",")} km · ${fmt(kmh)} km/h${transport}<br>` +
+      (ablauf ? ablauf.slice(4) : `Hinfahrt ${dauer(sek)}${einfach ? "" : ` · zurück nach ${dauer(sek * 2)}`}`) + "<br>" +
       `Verbrauch ${fmt(korn)} Nahrung · Ladung <span class="${last > kap ? "warn" : ""}">${fmt(last)} / ${fmt(kap)}</span>` +
       (faktor > 1.001 ? `<br><span class="warn">Unwetter am Start: Die Fahrt dauert ${Math.round((faktor - 1) * 100)} % länger.</span>` : "");
   }
@@ -538,7 +645,7 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
     const liste = ziele.filter(z => (ort === "*" ? z.rel === "eigen" || z.rel === "allianz" : z.ort === ort) && passt(z));
     if (ort !== "*") liste.sort((a, b) => a.nr - b.nr);
     wahl.innerHTML = `<option value="">${liste.length ? "– Bereich wählen –" : "– nichts passt zum Filter –"}</option>` + liste.map(z =>
-      `<option value="${esc(z.id)}"${z.id === alt ? " selected" : ""}>${z.nr} · ${esc(z.name)} – ${esc(z.besitzer || "frei")}${z.rel === "eigen" ? " (du)" : ""} · ${String(z.km).replace(".", ",")} km${z.schutz ? " · 🛡 bis " + z.schutz : ""}</option>`).join("");
+      `<option value="${esc(z.id)}"${z.id === alt ? " selected" : ""}>${z.nr} · ${esc(z.name)} – ${esc(z.besitzer || "frei")}${z.rel === "eigen" ? " (du)" : ""} · ${String(z.km).replace(".", ",")} km${z.schutz ? " · 🛡 bis " + z.schutz : ""}${z.blauhelme > 0 ? " · 🪖" : ""}</option>`).join("");
     zeigeInfo();
     wahl.dispatchEvent(new Event("change", { bubbles: true }));
   }
@@ -546,7 +653,9 @@ if (k) karte(k).catch(e => { $("#kartenflaeche").innerHTML = `<div class="laden"
     const z = ziele.find(x => x.id === wahl.value);
     info.innerHTML = z ? `<span class="chip rel-${z.rel}">${esc(relText[z.rel])}</span> ${esc(z.name)}${z.besitzer ? " · " + esc(z.besitzer) : ""} · ${String(z.km).replace(".", ",")} km Fahrweg` +
       (z.schutz ? `<br><span class="chip rel-schutz">🛡 für dich gesperrt bis ${esc(z.schutz)}</span>` :
-        (z.spielraum !== null && z.spielraum !== undefined ? `<br><span class="chip">noch ${z.spielraum} % Spielraum je Angriff</span>` : "")) +
+        (z.spielraum === 0 ? `<br><span class="chip rel-schutz">Tagesgrenze erreicht – keine Beute mehr</span>` :
+          (z.spielraum !== null && z.spielraum !== undefined ? `<br><span class="chip">noch ${z.spielraum} % Spielraum je Angriff</span>` : ""))) +
+      (z.blauhelme > 0 ? `<br><span class="chip rel-blauhelm">🪖 Blauhelme vor Ort (noch etwa ${z.blauhelme} %)</span>` : "") +
       (z.sperre ? `<br><span class="chip">Erkundung erst ab ${esc(z.sperre)}</span>` : "") : "";
   }
   function setzeFilter(f) { filter = f; knoepfe.forEach(k => k.setAttribute("aria-pressed", String(k.dataset.filter === f))); }
